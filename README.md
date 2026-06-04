@@ -6,10 +6,42 @@ single-agent experience in JupyterLab, with capability-driven model/mode
 selectors and slash-command + skill support that comes straight from whatever
 ACP agent ("harness") you bind a chat to.
 
-> **Status: early.** The design is settled (see
-> [`docs/design-decisions.md`](docs/design-decisions.md)); the implementation
-> spec and code are being written. A working proof-of-concept already exists in
-> a separate fork — see [Reference implementation](#reference-implementation).
+[![CI](https://github.com/SchmidtDSE/jupyter-acp/actions/workflows/ci.yml/badge.svg)](https://github.com/SchmidtDSE/jupyter-acp/actions/workflows/ci.yml)
+
+> **Status: early but working.** A functioning JupyterLab extension: open a chat
+> in the sidebar (or as draggable main-area tabs), bind an agent, switch
+> models/modes, run slash commands, approve tool calls, and watch it edit your
+> open notebook live. Rough edges remain — see [Limitations](#limitations). The
+> design rationale is in [`docs/design-decisions.md`](docs/design-decisions.md).
+
+## Install
+
+Requires JupyterLab ≥ 4.2 and at least one ACP agent on your `PATH` — e.g.
+`claude-agent-acp` (Claude Code) or `opencode`. Not yet on PyPI, so install from
+source (JupyterLab is needed at build time to compile the extension):
+
+```bash
+git clone https://github.com/SchmidtDSE/jupyter-acp
+cd jupyter-acp
+pip install jupyterlab          # provides jlpm for the build
+jlpm install && jlpm build:prod
+pip install -e .
+jupyter labextension develop --overwrite .
+```
+
+## Use
+
+```bash
+jupyter lab
+```
+
+- Click the **chat icon** in the left sidebar for the docked assistant, or
+  **New ACP Chat** in the launcher to open a chat as a main-area tab (open as
+  many as you like; drag/split them however you want).
+- Pick an agent, send a message. The **model / mode** selectors below the input
+  reflect what the agent advertises; type **`/`** for its slash commands.
+- When the agent wants to use a tool, an **approval card** appears — allow or
+  reject. Approve a notebook edit and watch the open `.ipynb` update live.
 
 ## The idea
 
@@ -82,6 +114,38 @@ remains a useful empirical reference for how each piece behaves.
 This work is part of an ongoing conversation with the Jupyter AI team about how
 personas, models, and agent harnesses should relate:
 [`jupyterlab/jupyter-ai#1558`](https://github.com/jupyterlab/jupyter-ai/issues/1558).
+
+## Limitations
+
+Early and honest about it:
+
+- **Not on PyPI** yet — install from source (above).
+- **One conversation per panel/tab** — no in-panel thread switcher yet (open
+  multiple tabs instead).
+- **Minimal rendering** — agent text + tool-approval cards are shown; rich
+  tool-call/diff and reasoning rendering, and a config-options selector, are
+  not built yet.
+- **Auth** — REST routes are token-authenticated; the streaming websocket is
+  not yet hardened. Run locally.
+
+## Development
+
+```bash
+# Python env (uv or venv); install package + tooling
+pip install jupyterlab
+jlpm install && jlpm build        # dev build (tsc + labextension)
+pip install -e ".[test]"
+jupyter labextension develop --overwrite .
+
+python -m pytest                  # 37 tests: ACP core, capabilities, binding,
+                                  # handlers (real-server), serializer, permission
+jlpm build:lib                    # typecheck the frontend
+```
+
+Layout: `jupyter_acp/` is the Python server extension (ACP session/binding +
+REST/websocket handlers, on `agent-client-protocol`); `src/` is the TypeScript
+labextension (React chat panel); `tests/` and `validation/` hold the suite and
+the Step-0 notebook-reflection check.
 
 ## License
 
