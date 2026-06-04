@@ -11,9 +11,7 @@ import acpSvgStr from '../style/icons/acp.svg';
 import { AcpChatPanel } from './widget';
 
 const OPEN = 'jupyter-acp:open';
-const MOVE_LEFT = 'jupyter-acp:move-left';
-const MOVE_RIGHT = 'jupyter-acp:move-right';
-const MOVE_MAIN = 'jupyter-acp:move-main';
+const NEW = 'jupyter-acp:new-chat';
 
 export const acpIcon = new LabIcon({
   name: 'jupyter-acp:icon',
@@ -31,63 +29,58 @@ const plugin: JupyterFrontEndPlugin<void> = {
     launcher: ILauncher | null,
     restorer: ILayoutRestorer | null
   ) => {
-    let panel: AcpChatPanel | null = null;
-
-    const ensurePanel = (): AcpChatPanel => {
-      if (panel === null || panel.isDisposed) {
-        panel = new AcpChatPanel();
-        panel.id = 'jupyter-acp-panel';
-        panel.title.icon = acpIcon;
-        panel.title.label = 'ACP Chat';
-        panel.title.caption = 'ACP Chat';
-        panel.title.closable = true; // closable when floated into the main area
+    // One persistent chat docked in the left sidebar (icon-only). Drag the
+    // tab to the right via right-click → "Switch Sidebar Side".
+    let sidebar: AcpChatPanel | null = null;
+    const ensureSidebar = (): AcpChatPanel => {
+      if (sidebar === null || sidebar.isDisposed) {
+        sidebar = new AcpChatPanel();
+        sidebar.id = 'jupyter-acp-sidebar';
+        sidebar.title.icon = acpIcon;
+        sidebar.title.caption = 'ACP Chat'; // tooltip only — no text label
+        app.shell.add(sidebar, 'left', { rank: 900 });
+        if (restorer) {
+          restorer.add(sidebar, 'jupyter-acp-sidebar');
+        }
       }
-      return panel;
+      return sidebar;
     };
 
-    // Relocate (and reveal) the single chat panel into the given shell area.
-    // Re-adding an existing widget to a different area moves it there, so the
-    // chat can live in the left/right sidebar or be popped out as a main tab —
-    // letting the file browser stay open alongside it.
-    const reveal = (area: 'left' | 'right' | 'main'): void => {
-      const p = ensurePanel();
-      const options = area === 'main' ? {} : { rank: 900 };
-      app.shell.add(p, area, options);
-      app.shell.activateById(p.id);
+    // Additional chats open as main-area tabs: multiple at once, freely
+    // draggable/splittable, with the file browser still docked.
+    let counter = 0;
+    const newMainChat = (): void => {
+      counter += 1;
+      const panel = new AcpChatPanel();
+      panel.id = `jupyter-acp-chat-${Date.now()}-${counter}`;
+      panel.title.icon = acpIcon;
+      panel.title.label = `ACP Chat ${counter}`;
+      panel.title.closable = true;
+      app.shell.add(panel, 'main');
+      app.shell.activateById(panel.id);
     };
 
-    // Default home: the left sidebar.
-    reveal('left');
-    if (restorer && panel) {
-      restorer.add(panel, 'jupyter-acp-panel');
-    }
+    ensureSidebar();
 
     app.commands.addCommand(OPEN, {
-      label: 'ACP Chat',
-      caption: 'Open the ACP chat panel',
+      label: 'ACP Chat (sidebar)',
+      caption: 'Reveal the docked ACP chat panel',
       icon: acpIcon,
-      execute: () => app.shell.activateById(ensurePanel().id)
+      execute: () => app.shell.activateById(ensureSidebar().id)
     });
-    app.commands.addCommand(MOVE_LEFT, {
-      label: 'ACP Chat: Move to Left Sidebar',
-      execute: () => reveal('left')
-    });
-    app.commands.addCommand(MOVE_RIGHT, {
-      label: 'ACP Chat: Move to Right Sidebar',
-      execute: () => reveal('right')
-    });
-    app.commands.addCommand(MOVE_MAIN, {
-      label: 'ACP Chat: Move to Main Area',
-      execute: () => reveal('main')
+    app.commands.addCommand(NEW, {
+      label: 'New ACP Chat',
+      caption: 'Open a new ACP chat in the main area',
+      icon: acpIcon,
+      execute: () => newMainChat()
     });
 
     if (palette) {
-      for (const command of [OPEN, MOVE_LEFT, MOVE_RIGHT, MOVE_MAIN]) {
-        palette.addItem({ command, category: 'AI' });
-      }
+      palette.addItem({ command: NEW, category: 'AI' });
+      palette.addItem({ command: OPEN, category: 'AI' });
     }
     if (launcher) {
-      launcher.add({ command: OPEN, category: 'Other', rank: 1 });
+      launcher.add({ command: NEW, category: 'Other', rank: 1 });
     }
   }
 };
