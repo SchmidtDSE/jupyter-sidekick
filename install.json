@@ -1,0 +1,5 @@
+{
+  "packageManager": "python",
+  "packageName": "jupyter_acp",
+  "uninstallInstructions": "Use pip to uninstall the jupyter-acp package."
+}

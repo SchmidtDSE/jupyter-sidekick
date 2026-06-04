@@ -33,10 +33,25 @@ Issues = "https://github.com/SchmidtDSE/jupyter-acp/issues"
 jupyter_acp = "jupyter_acp"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/jupyter_acp"]
+packages = ["jupyter_acp"]
 
 [tool.hatch.build.targets.wheel.shared-data]
 "jupyter-config/jupyter_server_config.d/jupyter_acp.json" = "etc/jupyter/jupyter_server_config.d/jupyter_acp.json"
+"jupyter_acp/labextension" = "share/jupyter/labextensions/jupyter-acp"
+"install.json" = "share/jupyter/labextensions/jupyter-acp/install.json"
+
+[tool.hatch.build.hooks.jupyter-builder]
+dependencies = ["hatch-jupyter-builder>=0.5"]
+build-function = "hatch_jupyter_builder.npm_builder"
+ensured-targets = [
+  "jupyter_acp/labextension/static/style.js",
+  "jupyter_acp/labextension/package.json",
+]
+skip-if-exists = ["jupyter_acp/labextension/static/style.js"]
+
+[tool.hatch.build.hooks.jupyter-builder.build-kwargs]
+build_cmd = "build:prod"
+npm = ["jlpm"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

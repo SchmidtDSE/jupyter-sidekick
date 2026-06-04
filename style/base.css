@@ -1,0 +1,90 @@
+.jacp-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--jp-layout-color0);
+  color: var(--jp-content-font-color1);
+}
+
+.jacp-picker {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.jacp-error {
+  color: var(--jp-error-color1);
+  font-size: var(--jp-ui-font-size0);
+}
+
+.jacp-chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.jacp-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--jp-border-color2);
+  flex: 0 0 auto;
+}
+
+.jacp-select {
+  background: var(--jp-layout-color1);
+  color: var(--jp-content-font-color1);
+  border: 1px solid var(--jp-border-color1);
+  border-radius: 3px;
+  padding: 2px 4px;
+}
+
+.jacp-messages {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jacp-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  white-space: pre-wrap;
+}
+
+.jacp-role {
+  font-size: var(--jp-ui-font-size0);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--jp-content-font-color3);
+}
+
+.jacp-user .jacp-text {
+  color: var(--jp-content-font-color1);
+}
+
+.jacp-input {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--jp-border-color2);
+  flex: 0 0 auto;
+}
+
+.jacp-input textarea {
+  flex: 1 1 auto;
+  resize: none;
+  height: 48px;
+  background: var(--jp-layout-color1);
+  color: var(--jp-content-font-color1);
+  border: 1px solid var(--jp-border-color1);
+  border-radius: 3px;
+  padding: 6px;
+  font-family: var(--jp-ui-font-family);
+}
