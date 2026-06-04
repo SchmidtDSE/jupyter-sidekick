@@ -1,5 +1,6 @@
-// The ACP chat panel: pick a harness, bind, then chat — with a Zed-style
-// capability toolbar (model / mode) driven by what the harness advertises.
+// The ACP chat panel: pick a harness, bind, then chat. Capability selectors
+// (model / mode) sit just below the input, Zed-style. Slash-command completion
+// is driven by the commands the harness advertises.
 
 import { ReactWidget } from '@jupyterlab/ui-components';
 import React, { useEffect, useRef, useState } from 'react';
@@ -7,7 +8,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AcpApi } from './api';
 import { makeApi, streamUrl } from './server';
 import { ChatStream } from './stream';
-import { HarnessInfo, SessionStateSnapshot, StreamEvent } from './types';
+import { AcpCommand, HarnessInfo, SessionStateSnapshot, StreamEvent } from './types';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -77,6 +78,7 @@ function ChatComponent(): JSX.Element {
   const [chosen, setChosen] = useState<string>('');
   const [chatId, setChatId] = useState<string | null>(null);
   const [state, setState] = useState<SessionStateSnapshot | null>(null);
+  const [commands, setCommands] = useState<AcpCommand[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +112,8 @@ function ChatComponent(): JSX.Element {
       setState(s => (s ? { ...s, selected_mode_id: ev.mode_id } : s));
     } else if (ev.type === 'config_option_update' && ev.config_options) {
       setState(s => (s ? { ...s, config_options: ev.config_options } : s));
+    } else if (ev.type === 'available_commands_update' && ev.commands) {
+      setCommands(ev.commands);
     }
   };
 
@@ -123,6 +127,7 @@ function ChatComponent(): JSX.Element {
     streamRef.current = stream;
     setChatId(id);
     setState(snapshot);
+    setCommands(snapshot.available_commands ?? []);
   };
 
   const send = (): void => {
@@ -154,9 +159,16 @@ function ChatComponent(): JSX.Element {
     );
   }
 
+  // Slash-command completion: when the input is "/" + a word (no space yet),
+  // offer matching advertised commands.
+  const slashMatch = /^\/(\S*)$/.exec(input);
+  const slashCommands = slashMatch
+    ? commands.filter(c => c.name.toLowerCase().startsWith(slashMatch[1].toLowerCase()))
+    : [];
+  const showSlash = !!slashMatch && slashCommands.length > 0;
+
   return (
     <div className="jacp-chat">
-      {state && <Toolbar api={apiRef.current} chatId={chatId} state={state} setState={setState} />}
       <div className="jacp-messages">
         {messages.map((m, i) => (
           <div key={i} className={`jacp-msg jacp-${m.role}`}>
@@ -165,10 +177,27 @@ function ChatComponent(): JSX.Element {
           </div>
         ))}
       </div>
+      {showSlash && (
+        <div className="jacp-slash">
+          {slashCommands.map(c => (
+            <div
+              key={c.name}
+              className="jacp-slash-item"
+              onMouseDown={e => {
+                e.preventDefault();
+                setInput(`/${c.name} `);
+              }}
+            >
+              <span className="jacp-slash-name">/{c.name}</span>
+              {c.description && <span className="jacp-slash-desc">{c.description}</span>}
+            </div>
+          ))}
+        </div>
+      )}
       <div className="jacp-input">
         <textarea
           value={input}
-          placeholder="Message the agent…"
+          placeholder="Message the agent…  (type / for commands)"
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -179,6 +208,7 @@ function ChatComponent(): JSX.Element {
         />
         <button onClick={send}>Send</button>
       </div>
+      {state && <Toolbar api={apiRef.current} chatId={chatId} state={state} setState={setState} />}
     </div>
   );
 }

@@ -30,8 +30,41 @@
   display: flex;
   gap: 8px;
   padding: 6px 10px;
-  border-bottom: 1px solid var(--jp-border-color2);
+  border-top: 1px solid var(--jp-border-color2);
   flex: 0 0 auto;
+}
+
+.jacp-slash {
+  flex: 0 0 auto;
+  max-height: 160px;
+  overflow-y: auto;
+  border-top: 1px solid var(--jp-border-color2);
+  background: var(--jp-layout-color1);
+}
+
+.jacp-slash-item {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.jacp-slash-item:hover {
+  background: var(--jp-layout-color2);
+}
+
+.jacp-slash-name {
+  font-family: var(--jp-code-font-family);
+  color: var(--jp-content-font-color1);
+}
+
+.jacp-slash-desc {
+  color: var(--jp-content-font-color3);
+  font-size: var(--jp-ui-font-size0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .jacp-select {

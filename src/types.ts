@@ -17,6 +17,11 @@ export interface ConfigOption {
   value: unknown;
 }
 
+export interface AcpCommand {
+  name: string;
+  description: string | null;
+}
+
 /** Response of GET /jupyter_acp/chats/<id>/state */
 export interface SessionStateSnapshot {
   harness_id: string | null;
@@ -25,6 +30,7 @@ export interface SessionStateSnapshot {
   available_modes?: ModeOption[];
   selected_mode_id?: string | null;
   config_options?: ConfigOption[];
+  available_commands?: AcpCommand[];
 }
 
 /** Entry of GET /jupyter_acp/harnesses */
@@ -39,5 +45,5 @@ export interface StreamEvent {
   text?: string;
   mode_id?: string;
   config_options?: ConfigOption[];
-  commands?: { name: string; description: string | null }[];
+  commands?: AcpCommand[];
 }

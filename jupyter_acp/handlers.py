@@ -66,8 +66,12 @@ class BindHandler(_BaseHandler):
         harness_id = body.get("harness_id")
         if not harness_id:
             return self.reply({"error": "missing harness_id"}, 400)
+        # Run the harness in the user's workspace so it sees their files/notebooks.
+        # Default to the server root; allow the client to override (e.g. the
+        # directory of the active notebook).
+        cwd = body.get("cwd") or self.settings.get("server_root_dir")
         try:
-            binding = await self.manager.bind(chat_id, harness_id)
+            binding = await self.manager.bind(chat_id, harness_id, cwd=cwd)
         except HarnessNotFoundError:
             return self.reply({"error": f"unknown harness {harness_id!r}"}, 404)
         except AlreadyBoundError as exc:

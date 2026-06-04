@@ -20,6 +20,7 @@ class SessionState:
         self.available_modes: List[Dict[str, Any]] = []
         self.selected_mode_id: Optional[str] = None
         self.config_options: List[Dict[str, Any]] = []
+        self.available_commands: List[Dict[str, Any]] = []
 
     def load_new_session(self, response) -> None:
         models = getattr(response, "models", None)
@@ -47,6 +48,12 @@ class SessionState:
         if isinstance(update, S.ConfigOptionUpdate):
             self.config_options = self._map_config(update.config_options)
             return True
+        if isinstance(update, S.AvailableCommandsUpdate):
+            self.available_commands = [
+                {"name": c.name, "description": getattr(c, "description", None)}
+                for c in (update.available_commands or [])
+            ]
+            return True
         return False
 
     def set_selected_model(self, model_id: str) -> None:
@@ -67,6 +74,7 @@ class SessionState:
             "available_modes": [dict(m) for m in self.available_modes],
             "selected_mode_id": self.selected_mode_id,
             "config_options": [dict(c) for c in self.config_options],
+            "available_commands": [dict(c) for c in self.available_commands],
         }
 
     @staticmethod
