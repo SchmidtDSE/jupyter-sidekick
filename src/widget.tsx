@@ -8,11 +8,24 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AcpApi } from './api';
 import { makeApi, streamUrl } from './server';
 import { ChatStream } from './stream';
-import { AcpCommand, HarnessInfo, SessionStateSnapshot, StreamEvent } from './types';
+import {
+  AcpCommand,
+  HarnessInfo,
+  PermissionOption,
+  SessionStateSnapshot,
+  StreamEvent,
+  ToolCallInfo
+} from './types';
 
 interface Message {
   role: 'user' | 'assistant';
   text: string;
+}
+
+interface PendingPermission {
+  request_id: string;
+  tool_call?: ToolCallInfo;
+  options: PermissionOption[];
 }
 
 function newChatId(): string {
@@ -82,6 +95,8 @@ function ChatComponent(): JSX.Element {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<boolean>(false);
+  const [permission, setPermission] = useState<PendingPermission | null>(null);
 
   useEffect(() => {
     apiRef.current
@@ -114,6 +129,21 @@ function ChatComponent(): JSX.Element {
       setState(s => (s ? { ...s, config_options: ev.config_options } : s));
     } else if (ev.type === 'available_commands_update' && ev.commands) {
       setCommands(ev.commands);
+    } else if (ev.type === 'permission_request' && ev.request_id) {
+      setPermission({
+        request_id: ev.request_id,
+        tool_call: ev.tool_call,
+        options: ev.options ?? []
+      });
+    } else if (ev.type === 'turn_end') {
+      setBusy(false);
+    }
+  };
+
+  const respondPermission = (optionId: string | null): void => {
+    if (permission) {
+      streamRef.current?.respondPermission(permission.request_id, optionId);
+      setPermission(null);
     }
   };
 
@@ -138,6 +168,7 @@ function ChatComponent(): JSX.Element {
     setMessages(prev => [...prev, { role: 'user', text }, { role: 'assistant', text: '' }]);
     streamRef.current.prompt(text);
     setInput('');
+    setBusy(true);
   };
 
   if (!chatId) {
@@ -177,6 +208,25 @@ function ChatComponent(): JSX.Element {
           </div>
         ))}
       </div>
+      {permission && (
+        <div className="jacp-perm">
+          <div className="jacp-perm-title">
+            Allow tool: {permission.tool_call?.title ?? permission.tool_call?.kind ?? 'action'}
+          </div>
+          <div className="jacp-perm-options">
+            {permission.options.map(o => (
+              <button
+                key={o.option_id}
+                className={`jacp-perm-btn jacp-perm-${(o.kind ?? '').startsWith('reject') ? 'reject' : 'allow'}`}
+                onClick={() => respondPermission(o.option_id)}
+              >
+                {o.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {busy && !permission && <div className="jacp-status">● thinking…</div>}
       {showSlash && (
         <div className="jacp-slash">
           {slashCommands.map(c => (

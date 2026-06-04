@@ -22,6 +22,19 @@ export interface AcpCommand {
   description: string | null;
 }
 
+export interface PermissionOption {
+  option_id: string;
+  name: string;
+  kind: string | null;
+}
+
+export interface ToolCallInfo {
+  tool_call_id?: string | null;
+  title?: string | null;
+  kind?: string | null;
+  status?: string | null;
+}
+
 /** Response of GET /jupyter_acp/chats/<id>/state */
 export interface SessionStateSnapshot {
   harness_id: string | null;
@@ -46,4 +59,7 @@ export interface StreamEvent {
   mode_id?: string;
   config_options?: ConfigOption[];
   commands?: AcpCommand[];
+  request_id?: string;
+  tool_call?: ToolCallInfo;
+  options?: PermissionOption[];
 }

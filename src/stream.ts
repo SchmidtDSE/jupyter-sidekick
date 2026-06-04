@@ -33,8 +33,16 @@ export class ChatStream {
     this.ws = ws;
   }
 
+  private send(message: object): void {
+    this.ws?.send(JSON.stringify(message));
+  }
+
   prompt(text: string): void {
-    this.ws?.send(JSON.stringify({ type: 'prompt', text }));
+    this.send({ type: 'prompt', text });
+  }
+
+  respondPermission(requestId: string, optionId: string | null): void {
+    this.send({ type: 'permission_response', request_id: requestId, option_id: optionId });
   }
 
   close(): void {

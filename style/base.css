@@ -102,6 +102,50 @@
   color: var(--jp-content-font-color1);
 }
 
+.jacp-perm {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border-top: 1px solid var(--jp-warn-color1, #f0a);
+  background: var(--jp-warn-color3, var(--jp-layout-color2));
+}
+
+.jacp-perm-title {
+  font-size: var(--jp-ui-font-size1);
+  margin-bottom: 6px;
+}
+
+.jacp-perm-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.jacp-perm-btn {
+  padding: 3px 10px;
+  border-radius: 3px;
+  border: 1px solid var(--jp-border-color1);
+  cursor: pointer;
+}
+
+.jacp-perm-allow {
+  background: var(--jp-accent-color1, var(--jp-brand-color1));
+  color: var(--jp-ui-inverse-font-color1, #fff);
+  border-color: transparent;
+}
+
+.jacp-perm-reject {
+  background: var(--jp-layout-color1);
+  color: var(--jp-content-font-color1);
+}
+
+.jacp-status {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  color: var(--jp-content-font-color3);
+  font-size: var(--jp-ui-font-size0);
+  font-style: italic;
+}
+
 .jacp-input {
   display: flex;
   gap: 6px;

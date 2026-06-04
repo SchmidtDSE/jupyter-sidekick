@@ -10,6 +10,7 @@ token on the upgrade request.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 
@@ -138,12 +139,20 @@ class StreamHandler(WebSocketHandler):
         if self._binding is None or not self._binding.is_bound:
             self.close(code=4404, reason="no binding for chat")
             return
+        client = self._binding.session.client
         self._listener = self._forward
-        self._binding.session.client.add_update_listener(self._listener)
+        client.add_update_listener(self._listener)
+        client.set_permission_handler(self._send_permission)
 
     def _forward(self, session_id, update) -> None:
+        self._send({**update_to_json(update)})
+
+    def _send_permission(self, request_id, payload) -> None:
+        self._send({"type": "permission_request", "request_id": request_id, **payload})
+
+    def _send(self, message: dict) -> None:
         try:
-            self.write_message(json.dumps(update_to_json(update)))
+            self.write_message(json.dumps(message))
         except Exception:
             pass
 
@@ -152,10 +161,28 @@ class StreamHandler(WebSocketHandler):
             data = json.loads(raw)
         except json.JSONDecodeError:
             return
-        if data.get("type") == "prompt" and getattr(self, "_binding", None) is not None:
-            await self._binding.session.prompt(data.get("text", ""))
+        if getattr(self, "_binding", None) is None:
+            return
+        kind = data.get("type")
+        if kind == "prompt":
+            # Run the turn as a task so this handler stays free to receive the
+            # user's permission response while the turn is mid-flight.
+            asyncio.create_task(self._run_prompt(data.get("text", "")))
+        elif kind == "permission_response":
+            self._binding.session.client.resolve_permission(
+                data.get("request_id"), data.get("option_id")
+            )
+
+    async def _run_prompt(self, text: str) -> None:
+        try:
+            await self._binding.session.prompt(text)
+        finally:
+            self._send({"type": "turn_end"})
 
     def on_close(self) -> None:
         binding = getattr(self, "_binding", None)
-        if self._listener is not None and binding is not None and binding.is_bound:
-            binding.session.client.remove_update_listener(self._listener)
+        if binding is not None and binding.is_bound:
+            client = binding.session.client
+            if self._listener is not None:
+                client.remove_update_listener(self._listener)
+            client.clear_permission_handler()
