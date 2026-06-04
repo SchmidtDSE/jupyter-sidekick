@@ -50,13 +50,15 @@ def server():
     port = _free_port()
     token = "test-token"
     base = f"http://127.0.0.1:{port}"
+    # Run jupyter_server as a module in *this* interpreter (the venv), so our
+    # editable-installed extension is loaded. `-m jupyter server` would instead
+    # dispatch to whatever `jupyter-server` is first on PATH.
     proc = subprocess.Popen(
         [
-            sys.executable, "-m", "jupyter", "server",
+            sys.executable, "-m", "jupyter_server",
             f"--ServerApp.port={port}",
             f"--ServerApp.token={token}",
             "--ServerApp.open_browser=False",
-            "--no-browser",
             "--ServerApp.root_dir=/tmp",
         ],
         stdout=subprocess.DEVNULL,

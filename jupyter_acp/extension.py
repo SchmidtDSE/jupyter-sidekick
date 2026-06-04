@@ -1,13 +1,26 @@
 """Jupyter Server extension entry point.
 
-Wires the default harness registry + BindingManager into the server settings and
-registers the REST routes. Thin glue — the testable seam is
-`build_default_registry`.
+Wires the harness registry + BindingManager into the server settings and
+registers the routes. Harnesses are launch metadata only — no per-harness code,
+because every binding is just "a command that speaks ACP". Built-in defaults can
+be extended or overridden from `jupyter_server_config` via the `harnesses`
+config trait (Zed/JetBrains-style), e.g.:
+
+    c.AcpExtension.harnesses = [
+        {"id": "my-agent", "display_name": "My Agent",
+         "command": "my-agent", "args": ["--acp"], "env": {"FOO": "bar"}},
+    ]
+
+The testable seam is `build_registry`.
 """
 from __future__ import annotations
 
+from typing import Any, Dict, List as ListT
+
 from jupyter_server.extension.application import ExtensionApp
 from jupyter_server.utils import url_path_join
+from traitlets import Dict as DictTrait
+from traitlets import List as ListTrait
 
 from .handlers import (
     BindHandler,
@@ -21,27 +34,56 @@ from .handlers import (
 from .manager import BindingManager
 from .registry import HarnessRegistry, HarnessSpec
 
-# Default bindable harnesses. Launch metadata only — capabilities come from the
-# live ACP session. `claude-agent-acp` is the Claude Code ACP server; OpenCode's
-# exact ACP invocation is TBD pending a real-harness smoke test.
-DEFAULT_HARNESSES = [
-    HarnessSpec(id="claude-code", display_name="Claude Code", command="claude-agent-acp"),
-    HarnessSpec(id="opencode", display_name="OpenCode", command="opencode"),
+# Built-in harnesses. Each is launch metadata only; capabilities come from the
+# live ACP session. Listed agents need their CLI installed + authed to bind.
+# Commands per the ACP ecosystem (agentclientprotocol.com, Zed, JetBrains).
+DEFAULT_HARNESSES: ListT[Dict[str, Any]] = [
+    {"id": "claude-code", "display_name": "Claude Code", "command": "claude-agent-acp"},
+    {"id": "opencode", "display_name": "OpenCode", "command": "opencode", "args": ["acp"]},
+    {"id": "github-copilot", "display_name": "GitHub Copilot", "command": "copilot", "args": ["--acp"]},
+    {"id": "qwen-code", "display_name": "Qwen Code", "command": "qwen", "args": ["--experimental-acp"]},
+    {"id": "gemini", "display_name": "Gemini CLI", "command": "gemini", "args": ["--experimental-acp"]},
 ]
 
 
-def build_default_registry() -> HarnessRegistry:
+def _spec_from_dict(spec: Dict[str, Any]) -> HarnessSpec:
+    return HarnessSpec(
+        id=spec["id"],
+        display_name=spec.get("display_name", spec["id"]),
+        command=spec["command"],
+        args=tuple(spec.get("args", ())),
+        env=spec.get("env"),
+    )
+
+
+def build_registry(specs: ListT[Dict[str, Any]]) -> HarnessRegistry:
+    """Build a registry from spec dicts; later entries override earlier by id."""
+    by_id: "dict[str, Dict[str, Any]]" = {}
+    for spec in specs:
+        by_id[spec["id"]] = spec
     registry = HarnessRegistry()
-    for spec in DEFAULT_HARNESSES:
-        registry.register(spec)
+    for spec in by_id.values():
+        registry.register(_spec_from_dict(spec))
     return registry
+
+
+def build_default_registry() -> HarnessRegistry:
+    return build_registry(DEFAULT_HARNESSES)
 
 
 class AcpExtension(ExtensionApp):
     name = "jupyter_acp"
 
+    harnesses = ListTrait(
+        DictTrait(),
+        default_value=[],
+        config=True,
+        help="Extra ACP harnesses (or overrides of built-ins by id). Each is a "
+        "dict with keys: id, display_name, command, args, env.",
+    )
+
     def initialize_settings(self) -> None:
-        registry = build_default_registry()
+        registry = build_registry(DEFAULT_HARNESSES + list(self.harnesses))
         self.settings["acp_registry"] = registry
         self.settings["acp_manager"] = BindingManager(registry)
 
