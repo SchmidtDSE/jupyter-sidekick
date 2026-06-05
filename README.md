@@ -134,7 +134,7 @@ Early and honest about it:
 # Python env (uv or venv); install package + tooling
 pip install jupyterlab
 jlpm install && jlpm build        # dev build (tsc + labextension)
-pip install -e ".[test]"
+pip install -e . --group test
 jupyter labextension develop --overwrite .
 
 python -m pytest                  # 37 tests: ACP core, capabilities, binding,

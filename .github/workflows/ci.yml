@@ -39,7 +39,7 @@ jobs:
         # above, so no rebuild happens.
         run: |
           pip install hatchling hatch-jupyter-builder editables
-          pip install -e ".[test]" --no-build-isolation
+          pip install . --group test --no-build-isolation
 
       - name: Verify extensions are discovered
         run: |
