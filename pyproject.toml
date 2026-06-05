@@ -1,5 +1,8 @@
 [build-system]
-requires = ["hatchling"]
+requires = [
+  "hatchling",
+  "jupyterlab >=4.5.0",  #  provides jlpm, jupyter-labextension command
+]
 build-backend = "hatchling.build"
 
 [project]
@@ -22,8 +25,17 @@ dependencies = [
   "jupyter-server>=2.4,<3",
 ]
 
-[project.optional-dependencies]
-test = ["pytest>=7", "pytest-asyncio>=0.23"]
+[dependency-groups]
+dev = [
+  "jupyterlab>=4.5.0",
+]
+docs = [
+  "mystmd>=1.10.1",
+]
+test = [
+  "pytest>=7",
+  "pytest-asyncio>=0.23",
+]
 
 [project.urls]
 Homepage = "https://github.com/SchmidtDSE/jupyterlab-acp"
