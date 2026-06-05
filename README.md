@@ -6,28 +6,29 @@ single-agent experience in JupyterLab, with capability-driven model/mode
 selectors and slash-command + skill support that comes straight from whatever
 ACP agent ("harness") you bind a chat to.
 
+[![PyPI](https://img.shields.io/pypi/v/jupyterlab-acp.svg)](https://pypi.org/project/jupyterlab-acp/)
 [![CI](https://github.com/SchmidtDSE/jupyterlab-acp/actions/workflows/ci.yml/badge.svg)](https://github.com/SchmidtDSE/jupyterlab-acp/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-schmidtdse.github.io-blue)](https://schmidtdse.github.io/jupyterlab-acp/)
 
 > **Status: early but working.** A functioning JupyterLab extension: open a chat
 > in the sidebar (or as draggable main-area tabs), bind an agent, switch
 > models/modes, run slash commands, approve tool calls, and watch it edit your
-> open notebook live. Rough edges remain — see [Limitations](#limitations). The
-> design rationale is in [`docs/design-decisions.md`](docs/design-decisions.md).
+> open notebook live. Rough edges remain — see [Limitations](#limitations).
+
+📖 **[Documentation](https://schmidtdse.github.io/jupyterlab-acp/)** — install,
+usage, architecture, and the design rationale.
 
 ## Install
 
-Requires JupyterLab ≥ 4.2 and at least one ACP agent on your `PATH` — e.g.
-`claude-agent-acp` (Claude Code) or `opencode`. Not yet on PyPI, so install from
-source (JupyterLab is needed at build time to compile the extension):
-
 ```bash
-git clone https://github.com/SchmidtDSE/jupyterlab-acp
-cd jupyterlab-acp
-pip install jupyterlab hatchling hatch-jupyter-builder editables   # build tooling (jlpm)
-jlpm install && jlpm build
-pip install -e . --no-build-isolation                    # hook reuses the built JS
-jupyter labextension develop --overwrite .
+pip install jupyterlab-acp
 ```
+
+Requires JupyterLab ≥ 4.2 and at least one ACP agent on your `PATH` — e.g.
+`claude-agent-acp` (Claude Code) or `opencode` — or any agent from the
+[ACP registry](https://github.com/agentclientprotocol/registry), which runs on
+demand. Then launch `jupyter lab`. For a development install from source, see
+the [docs](https://schmidtdse.github.io/jupyterlab-acp/install).
 
 ## Use
 
@@ -119,7 +120,6 @@ personas, models, and agent harnesses should relate:
 
 Early and honest about it:
 
-- **Not on PyPI** yet — install from source (above).
 - **One conversation per panel/tab** — no in-panel thread switcher yet (open
   multiple tabs instead).
 - **Minimal rendering** — agent text + tool-approval cards are shown; rich

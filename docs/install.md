@@ -9,9 +9,16 @@ Requires JupyterLab ≥ 4.2 and at least one ACP agent on your `PATH` — e.g.
 [ACP registry](https://github.com/agentclientprotocol/registry), which runs on
 demand via `npx`/`uvx`/downloaded binary.
 
-## From source
+```bash
+pip install jupyterlab-acp
+```
 
-Not yet on PyPI; JupyterLab is needed at build time to compile the extension.
+The wheel ships the prebuilt labextension, so that's all you need — launch
+`jupyter lab` and you're set.
+
+## From source (development)
+
+JupyterLab is needed at build time to compile the extension.
 
 ```bash
 git clone https://github.com/SchmidtDSE/jupyterlab-acp
