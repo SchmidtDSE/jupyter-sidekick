@@ -132,14 +132,12 @@ Early and honest about it:
 
 ```bash
 # Python env (uv or venv); install package + tooling
-pip install jupyterlab
-jlpm install && jlpm build        # dev build (tsc + labextension)
 pip install -e . --group dev --group test
 jupyter labextension develop --overwrite .
 
 python -m pytest                  # 37 tests: ACP core, capabilities, binding,
                                   # handlers (real-server), serializer, permission
-jlpm build:lib                    # typecheck the frontend
+jlpm build                        # run this after every JavaScript change to rebuild
 ```
 
 Layout: `jupyterlab_acp/` is the Python server extension (ACP session/binding +
