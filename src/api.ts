@@ -31,7 +31,18 @@ export class AcpApi {
 
   private async readJson<T>(res: Response): Promise<T> {
     if (!res.ok) {
-      throw new Error(`jupyterlab-acp request failed: ${res.status}`);
+      // Surface the server's error message (e.g. "could not launch …") rather
+      // than a bare status code.
+      let detail = '';
+      try {
+        const body = await res.json();
+        if (body && typeof body.error === 'string') {
+          detail = `: ${body.error}`;
+        }
+      } catch {
+        /* no JSON body */
+      }
+      throw new Error(`Request failed (${res.status})${detail}`);
     }
     return (await res.json()) as T;
   }

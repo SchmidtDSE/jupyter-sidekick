@@ -55,13 +55,25 @@ def test_binary_distribution_not_launchable_yet():
 
 
 def test_registry_listing_and_spec_for():
-    registry = AcpRegistry(fetch=lambda: SAMPLE)
+    # `which` returns a path for every runtime → npx/uvx agents are launchable.
+    registry = AcpRegistry(fetch=lambda: SAMPLE, which=lambda c: f"/usr/bin/{c}")
     listing = {a["id"]: a for a in registry.listing()}
     assert listing["cline"]["launchable"] is True
     assert listing["cline"]["display_name"] == "Cline"
     assert listing["somebin"]["launchable"] is False
     assert registry.spec_for("cline").command == "npx"
     assert registry.spec_for("missing") is None
+
+
+def test_not_launchable_when_runtime_missing():
+    # npx not on PATH → the npx agent (cline) is not offered; uvx still is.
+    registry = AcpRegistry(
+        fetch=lambda: SAMPLE,
+        which=lambda c: None if c == "npx" else f"/usr/bin/{c}",
+    )
+    listing = {a["id"]: a for a in registry.listing()}
+    assert listing["cline"]["launchable"] is False
+    assert listing["fast-agent"]["launchable"] is True
 
 
 def test_offline_safe():

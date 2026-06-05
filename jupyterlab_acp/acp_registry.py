@@ -16,6 +16,7 @@ import io
 import json
 import os
 import platform
+import shutil
 import stat
 import tarfile
 import urllib.request
@@ -118,11 +119,13 @@ class AcpRegistry:
         url: str = REGISTRY_URL,
         fetch: Optional[Callable[[], Dict[str, Any]]] = None,
         cache_root=None,
+        which: Callable[[str], Optional[str]] = shutil.which,
     ) -> None:
         self._url = url
         self._fetch = fetch or self._default_fetch
         self._cache_root = Path(cache_root or Path.home() / ".cache" / "jupyterlab-acp" / "agents")
         self._platform = current_platform_key()
+        self._which = which  # resolve a runtime (npx/uvx) on PATH; injectable for tests
         self._agents: Dict[str, Dict[str, Any]] = {}
         self._loaded = False
 
@@ -142,12 +145,17 @@ class AcpRegistry:
         self._loaded = True
 
     def _launchable(self, agent: Dict[str, Any]) -> bool:
-        if spec_from_distribution(agent) is not None:
-            return True
-        if not self._platform:
-            return False
-        entry = agent.get("distribution", {}).get("binary", {}).get(self._platform)
-        return bool(entry and entry.get("archive", "").endswith(_SUPPORTED_ARCHIVES))
+        # npx/uvx agents are only launchable if that runtime is on PATH; binary
+        # agents only if there's a supported archive for this platform.
+        dist = agent.get("distribution", {})
+        if "npx" in dist:
+            return self._which("npx") is not None
+        if "uvx" in dist:
+            return self._which("uvx") is not None
+        if self._platform:
+            entry = dist.get("binary", {}).get(self._platform)
+            return bool(entry and entry.get("archive", "").endswith(_SUPPORTED_ARCHIVES))
+        return False
 
     def get(self, agent_id: str) -> Optional[Dict[str, Any]]:
         self._ensure_loaded()

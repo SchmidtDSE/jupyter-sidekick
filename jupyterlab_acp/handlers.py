@@ -65,22 +65,33 @@ class BindHandler(_BaseHandler):
         # directory of the active notebook).
         cwd = body.get("cwd") or self.settings.get("server_root_dir")
         try:
-            try:
-                binding = await self.manager.bind(chat_id, harness_id, cwd=cwd)
-            except HarnessNotFoundError:
-                # Not a built-in harness — try the shared ACP registry (the
-                # server derives the npx/uvx launch command; the client never
-                # supplies an arbitrary command).
-                remote = self.settings.get("acp_remote_registry")
-                spec = (
-                    await asyncio.to_thread(remote.spec_for, harness_id) if remote else None
-                )
-                if spec is None:
-                    return self.reply({"error": f"unknown harness {harness_id!r}"}, 404)
-                binding = await self.manager.bind_spec(chat_id, spec, cwd=cwd)
+            binding = await self._resolve_and_bind(chat_id, harness_id, cwd)
+        except HarnessNotFoundError:
+            return self.reply({"error": f"unknown harness {harness_id!r}"}, 404)
         except AlreadyBoundError as exc:
             return self.reply({"error": str(exc)}, 409)
+        except FileNotFoundError as exc:
+            cmd = getattr(exc, "filename", None) or exc
+            return self.reply(
+                {"error": f"could not launch {harness_id!r}: {cmd!r} is not installed on the server's PATH"},
+                502,
+            )
+        except Exception as exc:  # launch / download failure — surface, don't 500
+            return self.reply({"error": f"could not launch {harness_id!r}: {exc}"}, 502)
         self.reply({"harness_id": binding.harness_id})
+
+    async def _resolve_and_bind(self, chat_id, harness_id, cwd):
+        try:
+            return await self.manager.bind(chat_id, harness_id, cwd=cwd)
+        except HarnessNotFoundError:
+            # Not a built-in harness — try the shared ACP registry (the server
+            # derives the npx/uvx/binary launch command; the client never
+            # supplies an arbitrary command).
+            remote = self.settings.get("acp_remote_registry")
+            spec = await asyncio.to_thread(remote.spec_for, harness_id) if remote else None
+            if spec is None:
+                raise  # genuinely unknown → 404
+            return await self.manager.bind_spec(chat_id, spec, cwd=cwd)
 
 
 class RegistryHandler(_BaseHandler):
