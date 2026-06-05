@@ -7,15 +7,25 @@ import { ICommandPalette } from '@jupyterlab/apputils';
 import { ILauncher } from '@jupyterlab/launcher';
 import { LabIcon } from '@jupyterlab/ui-components';
 
-import acpSvgStr from '../style/icons/acp.svg';
 import { AcpChatPanel } from './widget';
 
 const OPEN = 'jupyter-acp:open';
 const NEW = 'jupyter-acp:new-chat';
 
+// Inlined (rather than importing a .svg module) so the production labextension
+// build's license-webpack-plugin doesn't choke on an asset module.
+const ACP_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+  <g class="jp-icon3" fill="#616161">
+    <path d="M4 3h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H10l-5 4v-4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>
+  </g>
+  <g fill="none" stroke="var(--jp-layout-color1, #fff)" stroke-width="1.6" stroke-linecap="round">
+    <path d="M8 8.5h8M8 11.5h5"/>
+  </g>
+</svg>`;
+
 export const acpIcon = new LabIcon({
   name: 'jupyter-acp:icon',
-  svgstr: acpSvgStr
+  svgstr: ACP_ICON_SVG
 });
 
 const plugin: JupyterFrontEndPlugin<void> = {

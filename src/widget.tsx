@@ -100,6 +100,9 @@ function ChatComponent(): JSX.Element {
   const [busy, setBusy] = useState<boolean>(false);
   const [permission, setPermission] = useState<PendingPermission | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
+  const [boundAgent, setBoundAgent] = useState<{ name: string; icon?: string | null } | null>(
+    null
+  );
 
   useEffect(() => {
     apiRef.current
@@ -165,6 +168,12 @@ function ChatComponent(): JSX.Element {
       const stream = new ChatStream({ url: streamUrl(id), onEvent });
       stream.connect();
       streamRef.current = stream;
+      const reg = registry.find(a => a.id === harnessId);
+      const local = harnesses.find(h => h.id === harnessId);
+      setBoundAgent({
+        name: reg?.display_name ?? local?.display_name ?? harnessId,
+        icon: reg?.icon ?? null
+      });
       setChatId(id);
       setState(snapshot);
       setCommands(snapshot.available_commands ?? []);
@@ -256,6 +265,16 @@ function ChatComponent(): JSX.Element {
 
   return (
     <div className="jacp-chat">
+      {boundAgent && (
+        <div className="jacp-header">
+          {boundAgent.icon ? (
+            <img className="jacp-header-icon" src={boundAgent.icon} alt="" />
+          ) : (
+            <span className="jacp-header-dot" />
+          )}
+          <span className="jacp-header-name">{boundAgent.name}</span>
+        </div>
+      )}
       <div className="jacp-messages">
         {messages.map((m, i) => (
           <div key={i} className={`jacp-msg jacp-${m.role}`}>

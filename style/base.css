@@ -113,6 +113,32 @@
   height: 100%;
 }
 
+.jacp-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--jp-border-color2);
+  flex: 0 0 auto;
+}
+
+.jacp-header-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.jacp-header-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--jp-brand-color1);
+}
+
+.jacp-header-name {
+  font-weight: 600;
+  color: var(--jp-content-font-color1);
+}
+
 .jacp-toolbar {
   display: flex;
   gap: 8px;

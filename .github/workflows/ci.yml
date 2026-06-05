@@ -26,9 +26,12 @@ jobs:
           pip install jupyterlab
 
       - name: Build the labextension
+        # Dev build: `build:prod` currently trips a bug in the old
+        # license-webpack-plugin pinned by @jupyterlab/builder. The dev build is
+        # fully functional (just unminified, no license aggregation).
         run: |
           jlpm install
-          jlpm build:prod
+          jlpm build
 
       - name: Install package + test deps
         # The labextension is already built above, so the jupyter-builder hook

@@ -50,7 +50,9 @@ ensured-targets = [
 skip-if-exists = ["jupyter_acp/labextension/static/style.js"]
 
 [tool.hatch.build.hooks.jupyter-builder.build-kwargs]
-build_cmd = "build:prod"
+# Dev build for now: build:prod trips a bug in the old license-webpack-plugin
+# pinned by @jupyterlab/builder. The dev bundle is functional (unminified).
+build_cmd = "build"
 npm = ["jlpm"]
 
 [tool.pytest.ini_options]
