@@ -1,0 +1,17 @@
+version: 1
+project:
+  title: jupyter-acp
+  description: Jupyter-native access to coding agents over the Agent Client Protocol (ACP).
+  github: https://github.com/SchmidtDSE/jupyter-acp
+  toc:
+    - file: index.md
+    - file: install.md
+    - file: architecture.md
+    - title: Rationale
+      children:
+        - file: design-decisions.md
+        - file: personas-as-skills.md
+site:
+  template: book-theme
+  options:
+    folders: true

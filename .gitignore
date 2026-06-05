@@ -25,5 +25,8 @@ lib/
 .ipynb_checkpoints/
 .DS_Store
 
+# MyST docs build
+_build/
+
 # Local dev isolation
 .worktrees/
