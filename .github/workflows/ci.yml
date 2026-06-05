@@ -20,26 +20,9 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install build tooling (jupyterlab provides jlpm)
-        run: |
-          python -m pip install --upgrade pip
-          pip install jupyterlab
-
-      - name: Build the labextension
-        # Dev build: `build:prod` currently trips a bug in the old
-        # license-webpack-plugin pinned by @jupyterlab/builder. The dev build is
-        # fully functional (just unminified, no license aggregation).
-        run: |
-          jlpm install
-          jlpm build
-
       - name: Install package + test deps
-        # --no-build-isolation so the jupyter-builder hook runs in this env
-        # (which has jlpm via jupyterlab); the labextension is already built
-        # above, so no rebuild happens.
         run: |
-          pip install hatchling hatch-jupyter-builder editables
-          pip install . --group test --no-build-isolation
+          pip install . --group test --group dev
 
       - name: Verify extensions are discovered
         run: |
