@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any
+import os
+from typing import Any, Callable, Optional
 
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.extension.handler import ExtensionHandlerMixin
@@ -22,6 +23,32 @@ from tornado.websocket import WebSocketHandler
 from .binding import AlreadyBoundError
 from .registry import HarnessNotFoundError, harness_listing
 from .serialize import update_to_json
+
+
+def resolve_cwd(
+    requested: Optional[str],
+    server_root: Optional[str],
+    isdir: Callable[[str], bool] = os.path.isdir,
+) -> Optional[str]:
+    """Pick the working directory to launch an agent subprocess in.
+
+    Tries the client-requested cwd first, then the server root, expanding ``~``
+    and ``$VARS`` in each. Returns the first that exists, or ``None`` to let the
+    subprocess inherit the server's own working directory.
+
+    Never returns a non-existent path: handing one to the spawn raises a
+    ``FileNotFoundError`` whose ``filename`` is the *directory*, which is then
+    easily misread as a missing *command* ("not installed on the server's
+    PATH"). Resolving here keeps that error honest — a launch failure can then
+    only mean the command itself is missing.
+    """
+    for candidate in (requested, server_root):
+        if not candidate:
+            continue
+        path = os.path.expanduser(os.path.expandvars(candidate))
+        if isdir(path):
+            return path
+    return None
 
 
 class _BaseHandler(ExtensionHandlerMixin, APIHandler):
@@ -62,8 +89,10 @@ class BindHandler(_BaseHandler):
             return self.reply({"error": "missing harness_id"}, 400)
         # Run the harness in the user's workspace so it sees their files/notebooks.
         # Default to the server root; allow the client to override (e.g. the
-        # directory of the active notebook).
-        cwd = body.get("cwd") or self.settings.get("server_root_dir")
+        # directory of the active notebook). resolve_cwd expands ~/$VARS and
+        # falls back if the directory is missing, so a stale or unexpanded path
+        # can't masquerade as a "command not installed" launch failure.
+        cwd = resolve_cwd(body.get("cwd"), self.settings.get("server_root_dir"))
         try:
             binding = await self._resolve_and_bind(chat_id, harness_id, cwd)
         except HarnessNotFoundError:
