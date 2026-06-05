@@ -90,7 +90,6 @@ function ChatComponent(): JSX.Element {
   const streamRef = useRef<ChatStream | null>(null);
   const [harnesses, setHarnesses] = useState<HarnessInfo[]>([]);
   const [registry, setRegistry] = useState<RegistryAgent[]>([]);
-  const [chosen, setChosen] = useState<string>('');
   const [chatId, setChatId] = useState<string | null>(null);
   const [state, setState] = useState<SessionStateSnapshot | null>(null);
   const [commands, setCommands] = useState<AcpCommand[]>([]);
@@ -107,12 +106,7 @@ function ChatComponent(): JSX.Element {
   useEffect(() => {
     apiRef.current
       .listHarnesses()
-      .then(hs => {
-        setHarnesses(hs);
-        if (hs[0]) {
-          setChosen(hs[0].id);
-        }
-      })
+      .then(setHarnesses)
       .catch(e => setError(String(e)));
     // The shared ACP registry is best-effort (network); ignore failures.
     apiRef.current
@@ -183,6 +177,24 @@ function ChatComponent(): JSX.Element {
     }
   };
 
+  // "New chat" — tear down the current binding and return to the agent picker.
+  // A chat is bound to one agent for its life, so starting fresh means picking
+  // an agent again (Zed's "+ New chat" affordance).
+  const resetToPicker = (): void => {
+    streamRef.current?.close();
+    streamRef.current = null;
+    setChatId(null);
+    setState(null);
+    setMessages([]);
+    setCommands([]);
+    setBoundAgent(null);
+    setPermission(null);
+    setError(null);
+    setStarting(null);
+    setBusy(false);
+    setInput('');
+  };
+
   const send = (): void => {
     const text = input.trim();
     if (!text || !streamRef.current) {
@@ -195,37 +207,55 @@ function ChatComponent(): JSX.Element {
   };
 
   if (!chatId) {
-    const chosenHarness = harnesses.find(h => h.id === chosen);
-    const chosenUnavailable = !!chosenHarness && chosenHarness.available === false;
     const localIds = new Set(harnesses.map(h => h.id));
+    // Primary list: only agents actually installed on the server (their command
+    // resolves on PATH). Not-installed built-ins are omitted — like Zed, the
+    // picker lists what you can launch, and the registry below is where you add
+    // more. Borrow the registry's icon when ids line up.
+    const installed = harnesses.filter(h => h.available !== false);
+    const iconFor = (id: string): string | null => registry.find(r => r.id === id)?.icon ?? null;
     const registryAgents = registry.filter(a => a.launchable && !localIds.has(a.id));
     const isStarting = starting !== null;
     return (
       <div className="jacp-picker">
-        <h3>New ACP chat</h3>
+        <h3>New chat</h3>
         {error && <div className="jacp-error">{error}</div>}
-        <div className="jacp-picker-row">
-          <select value={chosen} disabled={isStarting} onChange={e => setChosen(e.target.value)}>
-            {harnesses.map(h => (
-              <option key={h.id} value={h.id}>
-                {h.display_name}
-                {h.available === false ? ' — not installed' : ''}
-              </option>
-            ))}
-          </select>
-          <button onClick={() => start(chosen)} disabled={!chosen || chosenUnavailable || isStarting}>
-            {starting === chosen ? 'Starting…' : 'Start'}
-          </button>
-        </div>
-        {chosenUnavailable && (
+        {installed.length > 0 ? (
+          <div className="jacp-agent-list">
+            {installed.map(h => {
+              const icon = iconFor(h.id);
+              return (
+                <button
+                  key={h.id}
+                  className="jacp-agent-card"
+                  disabled={isStarting}
+                  onClick={() => start(h.id)}
+                >
+                  {icon ? (
+                    <img className="jacp-agent-icon" src={icon} alt="" />
+                  ) : (
+                    <span className="jacp-agent-dot" />
+                  )}
+                  <span className="jacp-agent-text">
+                    <span className="jacp-agent-name">
+                      {h.display_name}
+                      {starting === h.id ? ' · starting…' : ''}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
           <div className="jacp-hint">
-            “{chosenHarness?.display_name}” isn’t installed on the server. Install its CLI
-            (the command on its <code>PATH</code>) to use it.
+            No ACP agents are installed on the server. Add one below, or install an
+            agent CLI (e.g. <code>claude-agent-acp</code> or <code>opencode</code>) on
+            the server’s <code>PATH</code>.
           </div>
         )}
         {registryAgents.length > 0 && (
-          <div className="jacp-registry">
-            <div className="jacp-registry-head">More agents · ACP Registry</div>
+          <details className="jacp-registry">
+            <summary className="jacp-registry-head">Add agents · ACP Registry</summary>
             <div className="jacp-registry-sub">
               Run on demand via npx / uvx / downloaded binary. May prompt for the agent’s own sign-in.
             </div>
@@ -238,7 +268,11 @@ function ChatComponent(): JSX.Element {
                   title={a.description ?? undefined}
                   onClick={() => start(a.id)}
                 >
-                  {a.icon && <img className="jacp-agent-icon" src={a.icon} alt="" />}
+                  {a.icon ? (
+                    <img className="jacp-agent-icon" src={a.icon} alt="" />
+                  ) : (
+                    <span className="jacp-agent-dot" />
+                  )}
                   <span className="jacp-agent-text">
                     <span className="jacp-agent-name">
                       {a.display_name}
@@ -249,7 +283,7 @@ function ChatComponent(): JSX.Element {
                 </button>
               ))}
             </div>
-          </div>
+          </details>
         )}
       </div>
     );
@@ -273,6 +307,13 @@ function ChatComponent(): JSX.Element {
             <span className="jacp-header-dot" />
           )}
           <span className="jacp-header-name">{boundAgent.name}</span>
+          <button
+            className="jacp-newchat"
+            title="Start a new chat (pick an agent)"
+            onClick={resetToPicker}
+          >
+            + New chat
+          </button>
         </div>
       )}
       <div className="jacp-messages">
