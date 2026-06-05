@@ -1,0 +1,13 @@
+version: 2
+
+build:
+  os: "ubuntu-lts-latest"
+
+  tools:
+    nodejs: "24"
+
+  commands:
+    - "npm install -g mystmd"
+    - "cd docs && myst build --html"
+    - "mkdir --parents $READTHEDOCS_OUTPUT/html/"
+    - "mv docs/_build/html/* $READTHEDOCS_OUTPUT/html/."
