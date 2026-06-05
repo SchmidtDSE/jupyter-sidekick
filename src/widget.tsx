@@ -212,7 +212,7 @@ function ChatComponent(): JSX.Element {
     // resolves on PATH). Not-installed built-ins are omitted — like Zed, the
     // picker lists what you can launch, and the registry below is where you add
     // more. Borrow the registry's icon when ids line up.
-    const installed = harnesses.filter(h => h.available !== false);
+    const installedHarnesses = harnesses.filter(h => h.available !== false);
     const iconFor = (id: string): string | null => registry.find(r => r.id === id)?.icon ?? null;
     const registryAgents = registry.filter(a => a.launchable && !localIds.has(a.id));
     const isStarting = starting !== null;
@@ -220,9 +220,9 @@ function ChatComponent(): JSX.Element {
       <div className="jacp-picker">
         <h3>New chat</h3>
         {error && <div className="jacp-error">{error}</div>}
-        {installed.length > 0 ? (
+        {installedHarnesses.length > 0 ? (
           <div className="jacp-agent-list">
-            {installed.map(h => {
+            {installedHarnesses.map(h => {
               const icon = iconFor(h.id);
               return (
                 <button

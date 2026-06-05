@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
-from typing import Any, Callable, Optional
+from typing import Any, Optional
 
 from jupyter_server.base.handlers import APIHandler
 from jupyter_server.extension.handler import ExtensionHandlerMixin
@@ -28,7 +28,6 @@ from .serialize import update_to_json
 def resolve_cwd(
     requested: Optional[str],
     server_root: Optional[str],
-    isdir: Callable[[str], bool] = os.path.isdir,
 ) -> Optional[str]:
     """Pick the working directory to launch an agent subprocess in.
 
@@ -46,7 +45,7 @@ def resolve_cwd(
         if not candidate:
             continue
         path = os.path.expanduser(os.path.expandvars(candidate))
-        if isdir(path):
+        if os.path.isdir(path):
             return path
     return None
 

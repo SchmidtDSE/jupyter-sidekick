@@ -122,30 +122,28 @@ def test_requires_auth(server):
 # was reported as a "command not installed on PATH" launch failure.
 from jupyterlab_acp.handlers import resolve_cwd  # noqa: E402
 
-
-def test_resolve_cwd_returns_existing_requested():
-    assert resolve_cwd("/exists", "/root", isdir=lambda p: p == "/exists") == "/exists"
+_HOME_PROJ = os.path.expanduser("~/proj")
 
 
-def test_resolve_cwd_expands_tilde():
-    # A literal "~" must be expanded before it reaches the subprocess spawn.
-    expanded = os.path.expanduser("~/proj")
-    assert resolve_cwd("~/proj", None, isdir=lambda p: p == expanded) == expanded
-
-
-def test_resolve_cwd_expands_env_vars(monkeypatch):
-    monkeypatch.setenv("WORK", "/work")
-    assert resolve_cwd("$WORK/x", None, isdir=lambda p: p == "/work/x") == "/work/x"
-
-
-def test_resolve_cwd_falls_back_to_server_root_when_requested_missing():
-    assert resolve_cwd("/gone", "/root", isdir=lambda p: p == "/root") == "/root"
-
-
-def test_resolve_cwd_returns_none_when_nothing_exists():
-    # None lets the subprocess inherit the server's own cwd — never a bad path.
-    assert resolve_cwd("/gone", "/also-gone", isdir=lambda p: False) is None
-
-
-def test_resolve_cwd_skips_empty_requested():
-    assert resolve_cwd("", "/root", isdir=lambda p: p == "/root") == "/root"
+@pytest.mark.parametrize(
+    "requested, server_root, env, existing, expected",
+    [
+        # requested exists -> returned as-is
+        ("/exists", "/root", {}, {"/exists"}, "/exists"),
+        # a literal "~" is expanded before the existence check
+        ("~/proj", None, {}, {_HOME_PROJ}, _HOME_PROJ),
+        # "$VARS" are expanded
+        ("$WORK/x", None, {"WORK": "/work"}, {"/work/x"}, "/work/x"),
+        # requested missing -> fall back to the server root
+        ("/gone", "/root", {}, {"/root"}, "/root"),
+        # nothing exists -> None, so the subprocess inherits the server's cwd
+        ("/gone", "/also-gone", {}, set(), None),
+        # empty requested is skipped, not treated as a path
+        ("", "/root", {}, {"/root"}, "/root"),
+    ],
+)
+def test_resolve_cwd(requested, server_root, env, existing, expected, monkeypatch):
+    for key, value in env.items():
+        monkeypatch.setenv(key, value)
+    monkeypatch.setattr(os.path, "isdir", lambda p: p in existing)
+    assert resolve_cwd(requested, server_root) == expected
