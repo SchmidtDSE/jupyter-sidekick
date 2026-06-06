@@ -117,6 +117,15 @@ def test_requires_auth(server):
     assert code in (401, 403)
 
 
+def test_close_unbound_chat_is_idempotent(server):
+    # Closing a chat that was never bound (or already closed) is a no-op success,
+    # so the client can fire it on reset/dispose without tracking bind state.
+    base, token = server
+    code, body = _request(base, token, "chats/never-bound/close", method="POST", body={})
+    assert code == 200
+    assert body == {"ok": True}
+
+
 # --- resolve_cwd (pure; no server needed) -------------------------------------
 # Regression coverage for the 502 where an unexpanded/missing working directory
 # was reported as a "command not installed on PATH" launch failure.

@@ -84,4 +84,9 @@ export class AcpApi {
   async setConfigOption(chatId: string, configId: string, value: unknown): Promise<void> {
     await this.post(this.chat(chatId, 'config-option'), { config_id: configId, value });
   }
+
+  /** Tear down the chat's binding + harness subprocess. Idempotent server-side. */
+  async close(chatId: string): Promise<void> {
+    await this.post(this.chat(chatId, 'close'), {});
+  }
 }

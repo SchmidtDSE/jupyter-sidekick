@@ -88,6 +88,9 @@ function Toolbar(props: {
 function ChatComponent(): JSX.Element {
   const apiRef = useRef<AcpApi>(makeApi());
   const streamRef = useRef<ChatStream | null>(null);
+  // Mirrors `chatId` so the (deps-[]) unmount cleanup can close the *current*
+  // binding rather than the value captured at mount.
+  const chatIdRef = useRef<string | null>(null);
   const [harnesses, setHarnesses] = useState<HarnessInfo[]>([]);
   const [registry, setRegistry] = useState<RegistryAgent[]>([]);
   const [chatId, setChatId] = useState<string | null>(null);
@@ -113,8 +116,21 @@ function ChatComponent(): JSX.Element {
       .listRegistry()
       .then(setRegistry)
       .catch(() => undefined);
-    return () => streamRef.current?.close();
+    // On dispose, close the stream and tell the server to tear down the binding
+    // (and its harness subprocess) so it isn't orphaned.
+    return () => {
+      streamRef.current?.close();
+      const id = chatIdRef.current;
+      if (id) {
+        apiRef.current.close(id).catch(() => undefined);
+      }
+    };
   }, []);
+
+  // Keep chatIdRef in sync for the unmount cleanup above.
+  useEffect(() => {
+    chatIdRef.current = chatId;
+  }, [chatId]);
 
   const onEvent = (ev: StreamEvent): void => {
     if (ev.type === 'agent_message_chunk' && ev.text != null) {
@@ -181,8 +197,14 @@ function ChatComponent(): JSX.Element {
   // A chat is bound to one agent for its life, so starting fresh means picking
   // an agent again (Zed's "+ New chat" affordance).
   const resetToPicker = (): void => {
+    const prev = chatId;
     streamRef.current?.close();
     streamRef.current = null;
+    // Tear down the prior binding so its harness subprocess doesn't leak; the
+    // next chat binds a fresh chat_id. Fire-and-forget — idempotent server-side.
+    if (prev) {
+      apiRef.current.close(prev).catch(() => undefined);
+    }
     setChatId(null);
     setState(null);
     setMessages([]);

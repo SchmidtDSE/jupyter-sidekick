@@ -59,3 +59,24 @@ async def test_lookup_returns_none_then_binding():
         assert manager.lookup("chat-1").harness_id == "fake"
     finally:
         await manager.close_all()
+
+
+async def test_close_tears_down_binding():
+    manager = BindingManager(_registry())
+    await manager.bind("chat-1", "fake", cwd=HERE)
+    await manager.close("chat-1")
+    # The binding is gone, so a fresh bind on the same chat_id is allowed (no
+    # leftover subprocess, no AlreadyBoundError).
+    assert manager.lookup("chat-1") is None
+    rebind = await manager.bind("chat-1", "fake", cwd=HERE)
+    try:
+        assert rebind.is_bound
+    finally:
+        await manager.close_all()
+
+
+async def test_close_absent_chat_is_noop():
+    # Idempotent: closing an unknown/already-closed chat must not raise, so a
+    # double-close (reset then dispose) is safe.
+    manager = BindingManager(_registry())
+    await manager.close("never-bound")

@@ -25,6 +25,7 @@ from traitlets import List as ListTrait
 from .acp_registry import AcpRegistry
 from .handlers import (
     BindHandler,
+    CloseHandler,
     ConfigOptionHandler,
     HarnessesHandler,
     ModeHandler,
@@ -102,6 +103,14 @@ class AcpExtension(ExtensionApp):
                 (url_path_join(base, r"chats/(.+)/model"), ModelHandler),
                 (url_path_join(base, r"chats/(.+)/mode"), ModeHandler),
                 (url_path_join(base, r"chats/(.+)/config-option"), ConfigOptionHandler),
+                (url_path_join(base, r"chats/(.+)/close"), CloseHandler),
                 (url_path_join(base, r"chats/(.+)/stream"), StreamHandler),
             ]
         )
+
+    async def stop_extension(self) -> None:
+        # Backstop: tear down every live binding (and its harness subprocess) on
+        # server shutdown, so nothing is orphaned even if clients never close.
+        manager = self.settings.get("acp_manager")
+        if manager is not None:
+            await manager.close_all()

@@ -173,6 +173,21 @@ class ConfigOptionHandler(_SetterHandler):
         await self._apply(chat_id, "set_config_option", body.get("config_id"), body.get("value"))
 
 
+class CloseHandler(_BaseHandler):
+    """Tear down a chat's binding (and its harness subprocess).
+
+    Called by the client on an intentional "new chat" reset or when a chat
+    panel is disposed. Idempotent: closing an unknown/already-closed chat is a
+    no-op success, so a double-send or a dispose-after-reset never errors. The
+    binding lifetime is deliberately *not* tied to the websocket, so a transient
+    stream disconnect doesn't kill the agent."""
+
+    @web.authenticated
+    async def post(self, chat_id: str) -> None:
+        await self.manager.close(chat_id)
+        self.reply({"ok": True})
+
+
 class StreamHandler(WebSocketHandler):
     """Per-chat duplex stream: client sends {"type":"prompt","text":...}; server
     streams the harness's session/update events back as JSON."""
