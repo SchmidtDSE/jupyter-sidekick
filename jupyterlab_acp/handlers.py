@@ -59,6 +59,22 @@ class _BaseHandler(ExtensionHandlerMixin, APIHandler):
     def manager(self):
         return self.settings["acp_manager"]
 
+    @property
+    def chat_index(self):
+        return self.settings.get("acp_chat_index")
+
+    async def _resolve_spec(self, harness_id):
+        """Resolve a harness id to a launch spec: a built-in first, then the
+        shared ACP registry. Raises HarnessNotFoundError if neither knows it."""
+        try:
+            return self.registry.get(harness_id)
+        except HarnessNotFoundError:
+            remote = self.settings.get("acp_remote_registry")
+            spec = await asyncio.to_thread(remote.spec_for, harness_id) if remote else None
+            if spec is None:
+                raise
+            return spec
+
     def reply(self, payload: Any, status: int = 200) -> None:
         self.set_status(status)
         self.set_header("Content-Type", "application/json")
@@ -106,20 +122,17 @@ class BindHandler(_BaseHandler):
             )
         except Exception as exc:  # launch / download failure — surface, don't 500
             return self.reply({"error": f"could not launch {harness_id!r}: {exc}"}, 502)
+        # Record the chat so it can be listed and resumed later. The recorded cwd
+        # must match what new_session saw, so resume's load_session lines up.
+        if self.chat_index is not None:
+            self.chat_index.record(
+                chat_id, binding.harness_id, binding.session.session_id, cwd or "."
+            )
         self.reply({"harness_id": binding.harness_id})
 
     async def _resolve_and_bind(self, chat_id, harness_id, cwd):
-        try:
-            return await self.manager.bind(chat_id, harness_id, cwd=cwd)
-        except HarnessNotFoundError:
-            # Not a built-in harness — try the shared ACP registry (the server
-            # derives the npx/uvx/binary launch command; the client never
-            # supplies an arbitrary command).
-            remote = self.settings.get("acp_remote_registry")
-            spec = await asyncio.to_thread(remote.spec_for, harness_id) if remote else None
-            if spec is None:
-                raise  # genuinely unknown → 404
-            return await self.manager.bind_spec(chat_id, spec, cwd=cwd)
+        spec = await self._resolve_spec(harness_id)  # raises HarnessNotFoundError
+        return await self.manager.bind_spec(chat_id, spec, cwd=cwd)
 
 
 class RegistryHandler(_BaseHandler):
@@ -130,6 +143,47 @@ class RegistryHandler(_BaseHandler):
         # don't block the event loop.
         agents = await asyncio.to_thread(remote.listing) if remote else []
         self.reply({"agents": agents})
+
+
+class ChatsHandler(_BaseHandler):
+    """List previously-bound chats (most recent first) for the resume picker."""
+
+    @web.authenticated
+    def get(self) -> None:
+        self.reply({"chats": self.chat_index.list() if self.chat_index else []})
+
+
+class ResumeHandler(_BaseHandler):
+    """Resume a prior chat: re-launch its harness and reload the ACP session.
+
+    The actual `load_session` is deferred to the stream handler (so the replay
+    reaches the browser); here we just relaunch + bind with a pending resume."""
+
+    @web.authenticated
+    async def post(self, chat_id: str) -> None:
+        record = self.chat_index.get(chat_id) if self.chat_index else None
+        if record is None:
+            return self.reply({"error": f"unknown chat {chat_id!r}"}, 404)
+        harness_id = record["harness_id"]
+        try:
+            spec = await self._resolve_spec(harness_id)
+        except HarnessNotFoundError:
+            return self.reply({"error": f"unknown harness {harness_id!r}"}, 404)
+        try:
+            binding = await self.manager.bind_for_resume(
+                chat_id, spec, record["session_id"], record.get("cwd")
+            )
+        except AlreadyBoundError as exc:
+            return self.reply({"error": str(exc)}, 409)
+        except FileNotFoundError as exc:
+            cmd = getattr(exc, "filename", None) or exc
+            return self.reply(
+                {"error": f"could not launch {harness_id!r}: {cmd!r} is not installed on the server's PATH"},
+                502,
+            )
+        except Exception as exc:  # launch failure — surface, don't 500
+            return self.reply({"error": f"could not resume {chat_id!r}: {exc}"}, 502)
+        self.reply({"harness_id": binding.harness_id})
 
 
 class StateHandler(_BaseHandler):
@@ -201,6 +255,7 @@ class StreamHandler(WebSocketHandler):
         return True
 
     def open(self, chat_id: str) -> None:
+        self._chat_id = chat_id
         self._binding = self.manager.lookup(chat_id)
         self._listener = None
         if self._binding is None or not self._binding.is_bound:
@@ -210,6 +265,21 @@ class StreamHandler(WebSocketHandler):
         self._listener = self._forward
         client.add_update_listener(self._listener)
         client.set_permission_handler(self._send_permission)
+        # Resume deferred its load_session until now, so the agent's replay of
+        # the prior conversation reaches the browser through this stream.
+        pending = getattr(self._binding, "pending_resume", None)
+        if pending:
+            self._binding.pending_resume = None
+            asyncio.create_task(self._resume(*pending))
+
+    async def _resume(self, session_id, cwd) -> None:
+        try:
+            await self._binding.session.load_session(session_id, cwd)
+            self._send(
+                {"type": "resumed", "state": self._binding.session.session_state.snapshot()}
+            )
+        except Exception as exc:
+            self._send({"type": "resume_error", "error": str(exc)})
 
     def _forward(self, session_id, update) -> None:
         self._send({**update_to_json(update)})
@@ -232,9 +302,14 @@ class StreamHandler(WebSocketHandler):
             return
         kind = data.get("type")
         if kind == "prompt":
+            text = data.get("text", "")
+            # First user message becomes the chat's title in the resume list.
+            index = self.settings.get("acp_chat_index")
+            if index is not None and getattr(self, "_chat_id", None):
+                index.set_title(self._chat_id, text[:80])
             # Run the turn as a task so this handler stays free to receive the
             # user's permission response while the turn is mid-flight.
-            asyncio.create_task(self._run_prompt(data.get("text", "")))
+            asyncio.create_task(self._run_prompt(text))
         elif kind == "permission_response":
             self._binding.session.client.resolve_permission(
                 data.get("request_id"), data.get("option_id")

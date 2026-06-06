@@ -4,7 +4,7 @@
 // JupyterLab plugin can later supply a `ServerConnection`-aware fetch (XSRF,
 // base URL) without changing call sites.
 
-import { HarnessInfo, RegistryAgent, SessionStateSnapshot } from './types';
+import { ChatRecord, HarnessInfo, RegistryAgent, SessionStateSnapshot } from './types';
 
 export interface ApiOptions {
   /** e.g. "/jupyterlab_acp" (no trailing slash required). */
@@ -65,6 +65,19 @@ export class AcpApi {
 
   async bind(chatId: string, harnessId: string): Promise<{ harness_id: string }> {
     const res = await this.post(this.chat(chatId, 'bind'), { harness_id: harnessId });
+    return this.readJson(res);
+  }
+
+  /** Prior chats, most-recently-active first, for the resume picker. */
+  async listChats(): Promise<ChatRecord[]> {
+    const res = await this._fetch(this.url('chats'));
+    const body = await this.readJson<{ chats: ChatRecord[] }>(res);
+    return body.chats;
+  }
+
+  /** Resume a prior chat: relaunch its harness and reload the ACP session. */
+  async resume(chatId: string): Promise<{ harness_id: string }> {
+    const res = await this.post(this.chat(chatId, 'resume'), {});
     return this.readJson(res);
   }
 

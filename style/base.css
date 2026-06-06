@@ -26,6 +26,29 @@
   max-width: 36ch;
 }
 
+.jacp-recents {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.jacp-recents-head {
+  font-size: var(--jp-ui-font-size0);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--jp-content-font-color2);
+}
+
+.jacp-recent-glyph {
+  flex: 0 0 auto;
+  width: 20px;
+  text-align: center;
+  margin-top: 1px;
+  color: var(--jp-content-font-color3);
+}
+
 .jacp-registry {
   margin-top: 14px;
   width: 100%;

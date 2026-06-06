@@ -10,6 +10,7 @@ import { makeApi, streamUrl } from './server';
 import { ChatStream } from './stream';
 import {
   AcpCommand,
+  ChatRecord,
   HarnessInfo,
   PermissionOption,
   RegistryAgent,
@@ -31,6 +32,23 @@ interface PendingPermission {
 
 function newChatId(): string {
   return `chat-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+}
+
+/** Compact relative time for the recent-chats list (epoch seconds → "2h ago"). */
+function relTime(epochSeconds: number): string {
+  const s = Math.max(0, Date.now() / 1000 - epochSeconds);
+  if (s < 60) {
+    return 'just now';
+  }
+  const m = Math.floor(s / 60);
+  if (m < 60) {
+    return `${m}m ago`;
+  }
+  const h = Math.floor(m / 60);
+  if (h < 24) {
+    return `${h}h ago`;
+  }
+  return `${Math.floor(h / 24)}d ago`;
 }
 
 function Toolbar(props: {
@@ -93,6 +111,7 @@ function ChatComponent(): JSX.Element {
   const chatIdRef = useRef<string | null>(null);
   const [harnesses, setHarnesses] = useState<HarnessInfo[]>([]);
   const [registry, setRegistry] = useState<RegistryAgent[]>([]);
+  const [recents, setRecents] = useState<ChatRecord[]>([]);
   const [chatId, setChatId] = useState<string | null>(null);
   const [state, setState] = useState<SessionStateSnapshot | null>(null);
   const [commands, setCommands] = useState<AcpCommand[]>([]);
@@ -116,6 +135,10 @@ function ChatComponent(): JSX.Element {
       .listRegistry()
       .then(setRegistry)
       .catch(() => undefined);
+    apiRef.current
+      .listChats()
+      .then(setRecents)
+      .catch(() => undefined);
     // On dispose, close the stream and tell the server to tear down the binding
     // (and its harness subprocess) so it isn't orphaned.
     return () => {
@@ -132,18 +155,35 @@ function ChatComponent(): JSX.Element {
     chatIdRef.current = chatId;
   }, [chatId]);
 
+  // Append a streamed chunk to the last message of the same role, or start a
+  // new one. Used for live agent output and for replayed turns on resume.
+  const appendChunk = (role: Message['role'], text: string): void => {
+    setMessages(prev => {
+      const next = prev.slice();
+      const last = next[next.length - 1];
+      if (last && last.role === role) {
+        next[next.length - 1] = { ...last, text: last.text + text };
+      } else {
+        next.push({ role, text });
+      }
+      return next;
+    });
+  };
+
   const onEvent = (ev: StreamEvent): void => {
     if (ev.type === 'agent_message_chunk' && ev.text != null) {
-      setMessages(prev => {
-        const next = prev.slice();
-        const last = next[next.length - 1];
-        if (last && last.role === 'assistant') {
-          next[next.length - 1] = { ...last, text: last.text + ev.text };
-        } else {
-          next.push({ role: 'assistant', text: ev.text as string });
-        }
-        return next;
-      });
+      appendChunk('assistant', ev.text);
+    } else if (ev.type === 'user_message_chunk' && ev.text != null) {
+      // Replayed prior user turns when resuming a session.
+      appendChunk('user', ev.text);
+    } else if (ev.type === 'resumed') {
+      // load_session finished; adopt the now-populated capability snapshot.
+      if (ev.state) {
+        setState(ev.state);
+        setCommands(ev.state.available_commands ?? []);
+      }
+    } else if (ev.type === 'resume_error') {
+      setError(ev.error ?? 'Could not resume this chat.');
     } else if (ev.type === 'current_mode_update' && ev.mode_id) {
       setState(s => (s ? { ...s, selected_mode_id: ev.mode_id } : s));
     } else if (ev.type === 'config_option_update' && ev.config_options) {
@@ -193,6 +233,33 @@ function ChatComponent(): JSX.Element {
     }
   };
 
+  // Reopen a prior chat. The server relaunches the harness and (once this stream
+  // attaches) reloads the session; the agent replays the transcript, which
+  // arrives as user/agent chunks, and a "resumed" event fills the toolbar.
+  const resume = async (rec: ChatRecord): Promise<void> => {
+    setError(null);
+    setStarting(rec.chat_id);
+    try {
+      await apiRef.current.resume(rec.chat_id);
+      const snapshot = await apiRef.current.getState(rec.chat_id);
+      const stream = new ChatStream({ url: streamUrl(rec.chat_id), onEvent });
+      stream.connect();
+      streamRef.current = stream;
+      const reg = registry.find(a => a.id === rec.harness_id);
+      const local = harnesses.find(h => h.id === rec.harness_id);
+      setBoundAgent({
+        name: reg?.display_name ?? local?.display_name ?? rec.harness_id,
+        icon: reg?.icon ?? null
+      });
+      setChatId(rec.chat_id);
+      setState(snapshot);
+      setCommands(snapshot.available_commands ?? []);
+    } catch (e) {
+      setError(String(e));
+      setStarting(null);
+    }
+  };
+
   // "New chat" — tear down the current binding and return to the agent picker.
   // A chat is bound to one agent for its life, so starting fresh means picking
   // an agent again (Zed's "+ New chat" affordance).
@@ -205,6 +272,11 @@ function ChatComponent(): JSX.Element {
     if (prev) {
       apiRef.current.close(prev).catch(() => undefined);
     }
+    // Refresh the recent list so the chat we just left shows up.
+    apiRef.current
+      .listChats()
+      .then(setRecents)
+      .catch(() => undefined);
     setChatId(null);
     setState(null);
     setMessages([]);
@@ -273,6 +345,39 @@ function ChatComponent(): JSX.Element {
             No ACP agents are installed on the server. Add one below, or install an
             agent CLI (e.g. <code>claude-agent-acp</code> or <code>opencode</code>) on
             the server’s <code>PATH</code>.
+          </div>
+        )}
+        {recents.length > 0 && (
+          <div className="jacp-recents">
+            <div className="jacp-recents-head">Recent</div>
+            <div className="jacp-agent-list">
+              {recents.map(rec => {
+                const agentName =
+                  registry.find(a => a.id === rec.harness_id)?.display_name ??
+                  harnesses.find(h => h.id === rec.harness_id)?.display_name ??
+                  rec.harness_id;
+                return (
+                  <button
+                    key={rec.chat_id}
+                    className="jacp-agent-card"
+                    disabled={isStarting}
+                    title={rec.cwd}
+                    onClick={() => resume(rec)}
+                  >
+                    <span className="jacp-recent-glyph">↺</span>
+                    <span className="jacp-agent-text">
+                      <span className="jacp-agent-name">
+                        {rec.title ?? '(untitled chat)'}
+                        {starting === rec.chat_id ? ' · resuming…' : ''}
+                      </span>
+                      <span className="jacp-agent-desc">
+                        {agentName} · {relTime(rec.updated_at)}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
         {registryAgents.length > 0 && (

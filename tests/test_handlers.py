@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -53,6 +55,9 @@ def server():
     # Run jupyter_server as a module in *this* interpreter (the venv), so our
     # editable-installed extension is loaded. `-m jupyter server` would instead
     # dispatch to whatever `jupyter-server` is first on PATH.
+    # Isolate JUPYTER_DATA_DIR so the chat index starts empty and doesn't touch
+    # the developer's real history file.
+    data_dir = tempfile.mkdtemp(prefix="jacp-test-data-")
     proc = subprocess.Popen(
         [
             sys.executable, "-m", "jupyter_server",
@@ -63,6 +68,7 @@ def server():
         ],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        env={**os.environ, "JUPYTER_DATA_DIR": data_dir},
     )
     try:
         deadline = time.time() + 30
@@ -83,6 +89,7 @@ def server():
             proc.wait(timeout=10)
         except Exception:
             proc.kill()
+        shutil.rmtree(data_dir, ignore_errors=True)
 
 
 def test_lists_default_harnesses(server):
@@ -124,6 +131,20 @@ def test_close_unbound_chat_is_idempotent(server):
     code, body = _request(base, token, "chats/never-bound/close", method="POST", body={})
     assert code == 200
     assert body == {"ok": True}
+
+
+def test_chats_list_starts_empty(server):
+    # With an isolated data dir and no binds, the resume list is empty.
+    base, token = server
+    code, body = _request(base, token, "chats")
+    assert code == 200
+    assert body == {"chats": []}
+
+
+def test_resume_unknown_chat_404(server):
+    base, token = server
+    code, _ = _request(base, token, "chats/never-recorded/resume", method="POST", body={})
+    assert code == 404
 
 
 # --- resolve_cwd (pure; no server needed) -------------------------------------

@@ -80,3 +80,20 @@ async def test_close_absent_chat_is_noop():
     # double-close (reset then dispose) is safe.
     manager = BindingManager(_registry())
     await manager.close("never-bound")
+
+
+async def test_bind_for_resume_defers_load_then_reloads():
+    manager = BindingManager(_registry())
+    spec = manager.registry.get("fake")
+    binding = await manager.bind_for_resume("chat-1", spec, "fake-session-1", HERE)
+    try:
+        # Bound, but the load is deferred until the stream attaches.
+        assert binding.is_bound
+        assert binding.pending_resume == ("fake-session-1", HERE)
+        assert binding.session.session_id is None
+        # Running the deferred load reloads the session + capabilities.
+        await binding.session.load_session(*binding.pending_resume)
+        assert binding.session.session_id == "fake-session-1"
+        assert binding.session.session_state.snapshot()["selected_model_id"] == "sonnet"
+    finally:
+        await manager.close_all()

@@ -15,6 +15,7 @@ The testable seam is `build_registry`.
 """
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, List as ListT
 
 from jupyter_server.extension.application import ExtensionApp
@@ -23,14 +24,17 @@ from traitlets import Dict as DictTrait
 from traitlets import List as ListTrait
 
 from .acp_registry import AcpRegistry
+from .chat_index import ChatIndex
 from .handlers import (
     BindHandler,
+    ChatsHandler,
     CloseHandler,
     ConfigOptionHandler,
     HarnessesHandler,
     ModeHandler,
     ModelHandler,
     RegistryHandler,
+    ResumeHandler,
     StateHandler,
     StreamHandler,
 )
@@ -75,6 +79,13 @@ def build_default_registry() -> HarnessRegistry:
     return build_registry(DEFAULT_HARNESSES)
 
 
+def default_chat_index_path() -> str:
+    """Per-server JSON index location, under the Jupyter data dir."""
+    from jupyter_core.paths import jupyter_data_dir
+
+    return os.path.join(jupyter_data_dir(), "jupyterlab_acp", "chats.json")
+
+
 class AcpExtension(ExtensionApp):
     name = "jupyterlab_acp"
 
@@ -91,6 +102,7 @@ class AcpExtension(ExtensionApp):
         self.settings["acp_registry"] = registry
         self.settings["acp_manager"] = BindingManager(registry)
         self.settings["acp_remote_registry"] = AcpRegistry()
+        self.settings["acp_chat_index"] = ChatIndex(default_chat_index_path())
 
     def initialize_handlers(self) -> None:
         base = self.name
@@ -104,6 +116,8 @@ class AcpExtension(ExtensionApp):
                 (url_path_join(base, r"chats/(.+)/mode"), ModeHandler),
                 (url_path_join(base, r"chats/(.+)/config-option"), ConfigOptionHandler),
                 (url_path_join(base, r"chats/(.+)/close"), CloseHandler),
+                (url_path_join(base, r"chats/(.+)/resume"), ResumeHandler),
+                (url_path_join(base, "chats"), ChatsHandler),
                 (url_path_join(base, r"chats/(.+)/stream"), StreamHandler),
             ]
         )

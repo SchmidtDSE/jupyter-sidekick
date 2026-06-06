@@ -21,6 +21,9 @@ class ChatBinding:
         self.chat_id = chat_id
         self._harness_id: Optional[str] = None
         self._session = None
+        # For a resumed chat: (session_id, cwd) to load once the stream attaches,
+        # so the agent's replay reaches the browser. Cleared after the load runs.
+        self.pending_resume: Optional[tuple] = None
 
     @property
     def is_draft(self) -> bool:

@@ -46,7 +46,13 @@ def test_available_commands_update():
     assert out["commands"] == [{"name": "help", "description": "Show help"}]
 
 
+def test_user_message_chunk_carries_text():
+    # User chunks are replayed when resuming a session, so prior user turns render.
+    out = update_to_json(acp.update_user_message_text("prior question"))
+    assert out == {"type": "user_message_chunk", "text": "prior question"}
+
+
 def test_unhandled_update_falls_back_to_type_tag():
-    # UserMessageChunk isn't specially handled; serializer still tags its type.
-    out = update_to_json(acp.update_user_message_text("typed by user"))
-    assert out == {"type": "user_message_chunk"}
+    # Tool-call updates aren't specially handled yet; serializer still tags type.
+    out = update_to_json(acp.update_tool_call(tool_call_id="t1", title="Run tests"))
+    assert out == {"type": "tool_call_update"}

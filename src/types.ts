@@ -63,6 +63,17 @@ export interface RegistryAgent {
   launchable: boolean;
 }
 
+/** Entry of GET /jupyterlab_acp/chats — a resumable prior chat. */
+export interface ChatRecord {
+  chat_id: string;
+  harness_id: string;
+  session_id: string;
+  cwd: string;
+  title: string | null;
+  created_at: number;
+  updated_at: number;
+}
+
 /** A message pushed over the per-chat websocket (serialize.update_to_json). */
 export interface StreamEvent {
   type: string;
@@ -73,4 +84,8 @@ export interface StreamEvent {
   request_id?: string;
   tool_call?: ToolCallInfo;
   options?: PermissionOption[];
+  /** 'resumed' carries the post-load capability snapshot. */
+  state?: SessionStateSnapshot;
+  /** 'resume_error' carries the failure message. */
+  error?: string;
 }

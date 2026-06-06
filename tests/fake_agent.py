@@ -65,6 +65,24 @@ class FakeAgent(acp.Agent):
             configOptions=_config_options(),
         )
 
+    async def load_session(self, cwd, session_id, mcp_servers=None, **kwargs):
+        # Replay a tiny prior conversation so resume tests can observe it, then
+        # return the same capability payload new_session advertises.
+        await self._conn.session_update(
+            session_id=session_id,
+            update=S.UserMessageChunk(
+                content=acp.text_block("prior question"),
+                sessionUpdate="user_message_chunk",
+            ),
+        )
+        await self._conn.session_update(
+            session_id=session_id,
+            update=acp.update_agent_message_text("prior answer"),
+        )
+        return acp.LoadSessionResponse(
+            models=_model_state(), modes=_mode_state(), configOptions=_config_options()
+        )
+
     async def set_session_model(self, model_id, session_id, **kwargs):
         return None
 

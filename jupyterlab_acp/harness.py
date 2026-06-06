@@ -62,6 +62,17 @@ class HarnessSession:
         self.session_state.load_new_session(response)
         return response
 
+    async def load_session(self, session_id: str, cwd: Optional[str] = None):
+        """Resume a prior session by id. The agent replays the conversation as
+        `session/update` notifications (so a listener must be attached first),
+        and returns the same capability payload as `new_session`."""
+        response = await self.conn.load_session(
+            cwd=cwd or self.cwd or ".", session_id=session_id
+        )
+        self.session_id = session_id
+        self.session_state.load_new_session(response)
+        return response
+
     async def prompt(self, text: str):
         return await self.conn.prompt(
             prompt=[acp.text_block(text)], session_id=self.session_id

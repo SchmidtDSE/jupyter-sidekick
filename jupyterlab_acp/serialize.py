@@ -24,6 +24,9 @@ def update_to_json(update) -> Dict[str, Any]:
         return {"type": kind, "text": _block_text(update.content)}
     if isinstance(update, S.AgentThoughtChunk):
         return {"type": kind, "text": _block_text(update.content)}
+    if isinstance(update, S.UserMessageChunk):
+        # Emitted when replaying a resumed session, so prior user turns render.
+        return {"type": kind, "text": _block_text(update.content)}
     if isinstance(update, S.CurrentModeUpdate):
         return {"type": kind, "mode_id": update.current_mode_id}
     if isinstance(update, S.ConfigOptionUpdate):

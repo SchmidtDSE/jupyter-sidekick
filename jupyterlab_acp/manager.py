@@ -50,6 +50,23 @@ class BindingManager:
         binding.bind(spec.id, session)
         return binding
 
+    async def bind_for_resume(
+        self, chat_id, spec, session_id: str, cwd: Optional[str] = None
+    ) -> ChatBinding:
+        """Bind a chat to a prior ACP session. Spawns + initializes the harness
+        but defers `load_session` (recorded as `pending_resume`) so the stream
+        handler can run it once a listener is attached and relay the replay."""
+        binding = self.get_or_create(chat_id)
+        if binding.is_bound:
+            raise AlreadyBoundError(
+                f"chat {chat_id} already bound to {binding.harness_id!r}"
+            )
+        session = HarnessSession(spec.command, *spec.args, cwd=cwd, env=spec.env)
+        await session.start()
+        binding.bind(spec.id, session)
+        binding.pending_resume = (session_id, cwd or ".")
+        return binding
+
     async def close(self, chat_id: str) -> None:
         binding = self._bindings.pop(chat_id, None)
         if binding is not None and binding.is_bound:
