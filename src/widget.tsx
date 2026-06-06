@@ -60,7 +60,34 @@ function Toolbar(props: {
   const { api, chatId, state, setState } = props;
   const models = state.available_models ?? [];
   const modes = state.available_modes ?? [];
-  if (models.length === 0 && modes.length === 0) {
+  // Agents (e.g. claude-agent-acp) often advertise `model`/`mode` as config
+  // options too; those already have dedicated selectors, so render only the
+  // *other* config options here (toggles, selects like an effort level, …).
+  const configOptions = (state.config_options ?? []).filter(c => {
+    if (c.id === 'model' && models.length > 0) {
+      return false;
+    }
+    if (c.id === 'mode' && modes.length > 0) {
+      return false;
+    }
+    return true;
+  });
+
+  const setConfig = async (id: string, value: unknown): Promise<void> => {
+    await api.setConfigOption(chatId, id, value);
+    setState(s =>
+      s
+        ? {
+            ...s,
+            config_options: (s.config_options ?? []).map(c =>
+              c.id === id ? { ...c, value } : c
+            )
+          }
+        : s
+    );
+  };
+
+  if (models.length === 0 && modes.length === 0 && configOptions.length === 0) {
     return null;
   }
   return (
@@ -98,6 +125,32 @@ function Toolbar(props: {
             </option>
           ))}
         </select>
+      )}
+      {configOptions.map(opt =>
+        opt.options && opt.options.length > 0 ? (
+          <select
+            key={opt.id}
+            className="jacp-select"
+            title={opt.name}
+            value={opt.value == null ? '' : String(opt.value)}
+            onChange={e => setConfig(opt.id, e.target.value)}
+          >
+            {opt.options.map(o => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+        ) : opt.kind === 'boolean' ? (
+          <label key={opt.id} className="jacp-config-bool" title={opt.name}>
+            <input
+              type="checkbox"
+              checked={opt.value === true}
+              onChange={e => setConfig(opt.id, e.target.checked)}
+            />
+            {opt.name}
+          </label>
+        ) : null
       )}
     </div>
   );

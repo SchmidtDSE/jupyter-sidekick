@@ -81,12 +81,29 @@ class SessionState:
     def _map_config(options) -> List[Dict[str, Any]]:
         mapped: List[Dict[str, Any]] = []
         for option in options or []:
-            mapped.append(
-                {
-                    "id": option.id,
-                    "name": option.name,
-                    "kind": getattr(option, "type", None),
-                    "value": getattr(option, "current_value", None),
-                }
-            )
+            entry = {
+                "id": option.id,
+                "name": option.name,
+                "kind": getattr(option, "type", None),
+                "value": getattr(option, "current_value", None),
+            }
+            # Select options carry their choices; flatten any groups so the UI
+            # gets a simple [{id, name}] list (choice id is the option's `value`).
+            choices = getattr(option, "options", None)
+            if choices is not None:
+                entry["options"] = SessionState._flatten_choices(choices)
+            mapped.append(entry)
         return mapped
+
+    @staticmethod
+    def _flatten_choices(choices) -> List[Dict[str, Any]]:
+        flat: List[Dict[str, Any]] = []
+        for choice in choices or []:
+            nested = getattr(choice, "options", None)
+            if nested is not None:  # SessionConfigSelectGroup
+                flat.extend(SessionState._flatten_choices(nested))
+            else:  # SessionConfigSelectOption — its id is `value`
+                flat.append(
+                    {"id": choice.value, "name": getattr(choice, "name", None) or choice.value}
+                )
+        return flat

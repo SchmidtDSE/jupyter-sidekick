@@ -15,6 +15,8 @@ export interface ConfigOption {
   name: string;
   kind: string | null;
   value: unknown;
+  /** Choices for a 'select' option (groups flattened); id is what we send back. */
+  options?: { id: string; name: string }[];
 }
 
 export interface AcpCommand {

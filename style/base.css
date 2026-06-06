@@ -254,6 +254,14 @@
   padding: 2px 4px;
 }
 
+.jacp-config-bool {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-content-font-color1);
+}
+
 .jacp-messages {
   flex: 1 1 auto;
   overflow-y: auto;
