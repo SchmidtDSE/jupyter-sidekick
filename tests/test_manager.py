@@ -104,6 +104,11 @@ async def test_prompt_streams_thought_and_tool_call_updates():
             "title": "Run tests",
             "kind": "execute",
             "status": "pending",
+            "content": [
+                {"block": "diff", "path": "/x.py", "old_text": "a\nb", "new_text": "a\nc"},
+                {"block": "content", "text": "ran 3 tests"},
+            ],
+            "locations": [{"path": "/x.py", "line": 12}],
         },
         {"type": "tool_call_update", "tool_call_id": "tc1", "status": "completed"},
         {"type": "agent_message_chunk", "text": "done"},

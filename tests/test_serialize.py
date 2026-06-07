@@ -87,6 +87,33 @@ def test_initial_tool_call_carries_fields():
     }
 
 
+def test_tool_call_serializes_content_and_locations():
+    call = S.ToolCall(
+        toolCallId="t3",
+        title="Edit file",
+        kind="edit",
+        status="completed",
+        content=[
+            S.FileEditToolCallContent(type="diff", path="/x.py", oldText="a", newText="b"),
+            S.ContentToolCallContent(type="content", content=acp.text_block("ok")),
+            S.TerminalToolCallContent(type="terminal", terminalId="term-1"),
+        ],
+        locations=[S.ToolCallLocation(path="/x.py", line=3)],
+    )
+    out = update_to_json(call)
+    assert out["content"] == [
+        {"block": "diff", "path": "/x.py", "old_text": "a", "new_text": "b"},
+        {"block": "content", "text": "ok"},
+        {"block": "terminal", "terminal_id": "term-1"},
+    ]
+    assert out["locations"] == [{"path": "/x.py", "line": 3}]
+
+
+def test_tool_call_without_content_omits_keys():
+    out = update_to_json(S.ToolCall(toolCallId="t4", title="Read", kind="read"))
+    assert "content" not in out and "locations" not in out
+
+
 def test_unhandled_update_falls_back_to_type_tag():
     # Plan updates aren't specially handled yet; serializer still tags the type.
     out = update_to_json(acp.update_plan(entries=[]))

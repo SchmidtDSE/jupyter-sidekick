@@ -23,12 +23,36 @@ def _coerce(value):
     return value if value is None or isinstance(value, (str, int, float, bool)) else str(value)
 
 
+def _tool_content_block(item) -> Dict[str, Any] | None:
+    """One ToolCall content entry → a JSON block the UI can render."""
+    if isinstance(item, S.ContentToolCallContent):
+        return {"block": "content", "text": _block_text(item.content)}
+    if isinstance(item, S.FileEditToolCallContent):
+        return {
+            "block": "diff",
+            "path": item.path,
+            "old_text": item.old_text,
+            "new_text": item.new_text,
+        }
+    if isinstance(item, S.TerminalToolCallContent):
+        return {"block": "terminal", "terminal_id": item.terminal_id}
+    return None
+
+
 def _tool_call_json(type_tag: str, update) -> Dict[str, Any]:
     out: Dict[str, Any] = {"type": type_tag, "tool_call_id": update.tool_call_id}
     for field in ("title", "kind", "status"):
         value = getattr(update, field, None)
         if value is not None:
             out[field] = _coerce(value)
+    content = getattr(update, "content", None)
+    if content:
+        blocks = [b for b in (_tool_content_block(c) for c in content) if b]
+        if blocks:
+            out["content"] = blocks
+    locations = getattr(update, "locations", None)
+    if locations:
+        out["locations"] = [{"path": loc.path, "line": loc.line} for loc in locations]
     return out
 
 

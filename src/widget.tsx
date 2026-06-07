@@ -16,7 +16,9 @@ import {
   RegistryAgent,
   SessionStateSnapshot,
   StreamEvent,
-  ToolCallInfo
+  ToolCallInfo,
+  ToolContentBlock,
+  ToolLocation
 } from './types';
 
 // The transcript is an ordered list of items: chat messages, the agent's
@@ -24,7 +26,15 @@ import {
 type TranscriptItem =
   | { kind: 'message'; role: 'user' | 'assistant'; text: string }
   | { kind: 'thought'; text: string }
-  | { kind: 'tool'; id: string; title: string; toolKind: string | null; status: string | null };
+  | {
+      kind: 'tool';
+      id: string;
+      title: string;
+      toolKind: string | null;
+      status: string | null;
+      content?: ToolContentBlock[];
+      locations?: ToolLocation[];
+    };
 
 const TOOL_GLYPHS: Record<string, string> = {
   read: '📖',
@@ -41,6 +51,40 @@ const TOOL_GLYPHS: Record<string, string> = {
 
 function toolGlyph(toolKind: string | null): string {
   return (toolKind && TOOL_GLYPHS[toolKind]) || TOOL_GLYPHS.other;
+}
+
+// A file-edit diff: removed lines from old_text, added lines from new_text.
+function ToolDiff(props: { path?: string; oldText?: string; newText?: string }): JSX.Element {
+  const { path, oldText, newText } = props;
+  const lines = (text: string, sign: '-' | '+', cls: string): JSX.Element[] =>
+    text.split('\n').map((line, i) => (
+      <div key={`${sign}${i}`} className={cls}>
+        {sign} {line}
+      </div>
+    ));
+  return (
+    <div className="jacp-tool-diff">
+      {path && <div className="jacp-tool-diff-path">{path}</div>}
+      <pre className="jacp-diff">
+        {oldText ? lines(oldText, '-', 'jacp-diff-del') : null}
+        {newText ? lines(newText, '+', 'jacp-diff-add') : null}
+      </pre>
+    </div>
+  );
+}
+
+function ToolContent(props: { block: ToolContentBlock }): JSX.Element | null {
+  const c = props.block;
+  if (c.block === 'content' && c.text) {
+    return <pre className="jacp-tool-output">{c.text}</pre>;
+  }
+  if (c.block === 'diff') {
+    return <ToolDiff path={c.path} oldText={c.old_text} newText={c.new_text} />;
+  }
+  if (c.block === 'terminal') {
+    return <div className="jacp-tool-terminal">terminal {c.terminal_id}</div>;
+  }
+  return null;
 }
 
 interface PendingPermission {
@@ -271,7 +315,10 @@ function ChatComponent(): JSX.Element {
           ...cur,
           title: ev.title ?? cur.title,
           toolKind: ev.kind ?? cur.toolKind,
-          status: ev.status ?? cur.status
+          status: ev.status ?? cur.status,
+          // Updates resend the current content/locations; replace when present.
+          content: ev.content ?? cur.content,
+          locations: ev.locations ?? cur.locations
         };
       } else {
         next.push({
@@ -279,7 +326,9 @@ function ChatComponent(): JSX.Element {
           id: toolId,
           title: ev.title ?? 'tool call',
           toolKind: ev.kind ?? null,
-          status: ev.status ?? null
+          status: ev.status ?? null,
+          content: ev.content,
+          locations: ev.locations
         });
       }
       return next;
@@ -587,9 +636,24 @@ function ChatComponent(): JSX.Element {
           }
           return (
             <div key={i} className={`jacp-tool jacp-tool-${it.status ?? 'pending'}`}>
-              <span className="jacp-tool-icon">{toolGlyph(it.toolKind)}</span>
-              <span className="jacp-tool-title">{it.title}</span>
-              {it.status && <span className="jacp-tool-status">{it.status}</span>}
+              <div className="jacp-tool-head">
+                <span className="jacp-tool-icon">{toolGlyph(it.toolKind)}</span>
+                <span className="jacp-tool-title">{it.title}</span>
+                {it.status && <span className="jacp-tool-status">{it.status}</span>}
+              </div>
+              {it.locations && it.locations.length > 0 && (
+                <div className="jacp-tool-locations">
+                  {it.locations.map((loc, j) => (
+                    <span key={j} className="jacp-tool-loc">
+                      {loc.path}
+                      {loc.line != null ? `:${loc.line}` : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {it.content?.map((block, j) => (
+                <ToolContent key={j} block={block} />
+              ))}
             </div>
           );
         })}

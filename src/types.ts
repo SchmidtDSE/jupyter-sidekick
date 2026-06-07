@@ -76,6 +76,21 @@ export interface ChatRecord {
   updated_at: number;
 }
 
+/** A tool call's rendered content: agent text, a file-edit diff, or a terminal ref. */
+export interface ToolContentBlock {
+  block: 'content' | 'diff' | 'terminal';
+  text?: string;
+  path?: string;
+  old_text?: string;
+  new_text?: string;
+  terminal_id?: string;
+}
+
+export interface ToolLocation {
+  path: string;
+  line?: number | null;
+}
+
 /** A message pushed over the per-chat websocket (serialize.update_to_json). */
 export interface StreamEvent {
   type: string;
@@ -95,4 +110,6 @@ export interface StreamEvent {
   title?: string;
   status?: string;
   kind?: string;
+  content?: ToolContentBlock[];
+  locations?: ToolLocation[];
 }

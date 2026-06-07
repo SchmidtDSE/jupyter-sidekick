@@ -111,7 +111,19 @@ class FakeAgent(acp.Agent):
             await self._conn.session_update(
                 session_id=session_id,
                 update=acp.update_tool_call(
-                    tool_call_id="tc1", title="Run tests", kind="execute", status="pending"
+                    tool_call_id="tc1",
+                    title="Run tests",
+                    kind="execute",
+                    status="pending",
+                    content=[
+                        S.FileEditToolCallContent(
+                            type="diff", path="/x.py", oldText="a\nb", newText="a\nc"
+                        ),
+                        S.ContentToolCallContent(
+                            type="content", content=acp.text_block("ran 3 tests")
+                        ),
+                    ],
+                    locations=[S.ToolCallLocation(path="/x.py", line=12)],
                 ),
             )
             await self._conn.session_update(

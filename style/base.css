@@ -307,11 +307,12 @@
   letter-spacing: 0.05em;
 }
 
-/* Tool call — a compact card that updates in place as status changes. */
+/* Tool call — a card that updates in place as status changes and can carry
+   content (a diff, command output, or a terminal reference). */
 .jacp-tool {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
   padding: 4px 8px;
   border: 1px solid var(--jp-border-color2);
   border-radius: 4px;
@@ -319,8 +320,75 @@
   font-size: var(--jp-ui-font-size0);
 }
 
+.jacp-tool-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .jacp-tool-icon {
   flex: 0 0 auto;
+}
+
+/* Tool content blocks */
+.jacp-tool-output {
+  margin: 0;
+  max-height: 240px;
+  overflow: auto;
+  padding: 6px 8px;
+  background: var(--jp-layout-color0);
+  border-radius: 3px;
+  font-family: var(--jp-code-font-family);
+  font-size: var(--jp-code-font-size, var(--jp-ui-font-size0));
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.jacp-tool-diff-path {
+  font-family: var(--jp-code-font-family);
+  color: var(--jp-content-font-color2);
+  margin-bottom: 2px;
+}
+
+.jacp-diff {
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+  border-radius: 3px;
+  font-family: var(--jp-code-font-family);
+  font-size: var(--jp-code-font-size, var(--jp-ui-font-size0));
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.jacp-diff-del {
+  background: var(--jp-error-color3, rgba(244, 67, 54, 0.12));
+  color: var(--jp-content-font-color1);
+}
+
+.jacp-diff-add {
+  background: var(--jp-success-color3, rgba(76, 175, 80, 0.12));
+  color: var(--jp-content-font-color1);
+}
+
+.jacp-tool-locations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.jacp-tool-loc {
+  font-family: var(--jp-code-font-family);
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-content-font-color2);
+  background: var(--jp-layout-color2);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+.jacp-tool-terminal {
+  font-family: var(--jp-code-font-family);
+  color: var(--jp-content-font-color2);
 }
 
 .jacp-tool-title {
