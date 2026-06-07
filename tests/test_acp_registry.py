@@ -63,6 +63,10 @@ def test_registry_listing_and_spec_for():
     assert listing["somebin"]["launchable"] is False
     assert registry.spec_for("cline").command == "npx"
     assert registry.spec_for("missing") is None
+    # npx/uvx run on demand; binary distributions download + extract on first use.
+    assert listing["cline"]["requires_download"] is False
+    assert listing["fast-agent"]["requires_download"] is False
+    assert listing["somebin"]["requires_download"] is True
 
 
 def test_not_launchable_when_runtime_missing():

@@ -94,6 +94,54 @@
   margin-bottom: 4px;
 }
 
+.jacp-registry-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.jacp-registry-search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 8px;
+  font-size: var(--jp-ui-font-size1);
+  color: var(--jp-ui-font-color1);
+  background: var(--jp-input-active-background, var(--jp-layout-color1));
+  border: 1px solid var(--jp-border-color2);
+  border-radius: 3px;
+}
+
+.jacp-registry-search:focus {
+  outline: none;
+  border-color: var(--jp-brand-color1);
+}
+
+.jacp-registry-filters {
+  display: flex;
+  gap: 4px;
+}
+
+.jacp-registry-chip {
+  cursor: pointer;
+  padding: 2px 8px;
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-content-font-color2);
+  background: var(--jp-layout-color2);
+  border: 1px solid var(--jp-border-color2);
+  border-radius: 10px;
+}
+
+.jacp-registry-chip:hover {
+  background: var(--jp-layout-color3);
+}
+
+.jacp-registry-chip-active {
+  color: var(--jp-ui-inverse-font-color1, #fff);
+  background: var(--jp-brand-color1);
+  border-color: var(--jp-brand-color1);
+}
+
 .jacp-agent-list {
   display: flex;
   flex-direction: column;

@@ -63,6 +63,8 @@ export interface RegistryAgent {
   description?: string | null;
   icon?: string | null;
   launchable: boolean;
+  /** Binary distributions download + extract on first launch; npx/uvx run on demand. */
+  requires_download: boolean;
 }
 
 /** Entry of GET /jupyterlab_acp/chats — a resumable prior chat. */

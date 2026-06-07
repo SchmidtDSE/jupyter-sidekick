@@ -240,6 +240,9 @@ function ChatComponent(): JSX.Element {
   const [boundAgent, setBoundAgent] = useState<{ name: string; icon?: string | null } | null>(
     null
   );
+  // Registry browse controls: substring search + a Zed-style launchability filter.
+  const [registryQuery, setRegistryQuery] = useState<string>('');
+  const [registryFilter, setRegistryFilter] = useState<'all' | 'runnable' | 'download'>('all');
 
   useEffect(() => {
     apiRef.current
@@ -482,6 +485,25 @@ function ChatComponent(): JSX.Element {
     const installedHarnesses = harnesses.filter(h => h.available !== false);
     const iconFor = (id: string): string | null => registry.find(r => r.id === id)?.icon ?? null;
     const registryAgents = registry.filter(a => a.launchable && !localIds.has(a.id));
+    const query = registryQuery.trim().toLowerCase();
+    const shownRegistryAgents = registryAgents.filter(a => {
+      if (registryFilter === 'runnable' && a.requires_download) {
+        return false;
+      }
+      if (registryFilter === 'download' && !a.requires_download) {
+        return false;
+      }
+      if (!query) {
+        return true;
+      }
+      const haystack = `${a.display_name} ${a.description ?? ''}`.toLowerCase();
+      return haystack.includes(query);
+    });
+    const REGISTRY_FILTERS: { id: 'all' | 'runnable' | 'download'; label: string }[] = [
+      { id: 'all', label: 'All' },
+      { id: 'runnable', label: 'Runnable here' },
+      { id: 'download', label: 'Needs download' }
+    ];
     const isStarting = starting !== null;
     return (
       <div className="jacp-picker">
@@ -559,8 +581,35 @@ function ChatComponent(): JSX.Element {
             <div className="jacp-registry-sub">
               Run on demand via npx / uvx / downloaded binary. May prompt for the agent’s own sign-in.
             </div>
+            <div className="jacp-registry-controls">
+              <input
+                className="jacp-registry-search"
+                type="search"
+                placeholder="Search agents…"
+                value={registryQuery}
+                onChange={e => setRegistryQuery(e.target.value)}
+              />
+              <div className="jacp-registry-filters">
+                {REGISTRY_FILTERS.map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    className={
+                      'jacp-registry-chip' +
+                      (registryFilter === f.id ? ' jacp-registry-chip-active' : '')
+                    }
+                    onClick={() => setRegistryFilter(f.id)}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="jacp-agent-list">
-              {registryAgents.map(a => (
+              {shownRegistryAgents.length === 0 && (
+                <div className="jacp-hint">No agents match.</div>
+              )}
+              {shownRegistryAgents.map(a => (
                 <button
                   key={a.id}
                   className="jacp-agent-card"

@@ -183,6 +183,7 @@ class AcpRegistry:
                 "description": a.get("description"),
                 "icon": a.get("icon"),
                 "launchable": self._launchable(a),
+                "requires_download": "binary" in a.get("distribution", {}),
             }
             for a in self._agents.values()
         ]
