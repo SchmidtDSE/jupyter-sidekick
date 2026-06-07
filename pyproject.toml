@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "jupyterlab-acp"
-version = "0.1.0"
+version = "0.2.0"
 description = "Jupyter-native access to coding agents over the Agent Client Protocol (ACP): per-chat single-agent binding."
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
@@ -46,6 +46,12 @@ jupyterlab_acp = "jupyterlab_acp"
 
 [tool.hatch.build.targets.wheel]
 packages = ["jupyterlab_acp"]
+
+[tool.hatch.build.targets.sdist]
+# Ship the prebuilt labextension in the sdist so downstream builds (e.g.
+# conda-forge) are self-contained: `skip-if-exists` below then skips the npm
+# build, so no Node/network is needed to install from the sdist.
+artifacts = ["jupyterlab_acp/labextension"]
 
 [tool.hatch.build.targets.wheel.shared-data]
 "jupyter-config/jupyter_server_config.d/jupyterlab_acp.json" = "etc/jupyter/jupyter_server_config.d/jupyterlab_acp.json"
