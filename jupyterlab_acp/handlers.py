@@ -15,7 +15,9 @@ import json
 import os
 from typing import Any, Optional
 
-from jupyter_server.base.handlers import APIHandler
+from jupyter_server.auth.decorator import ws_authenticated
+from jupyter_server.base.handlers import APIHandler, JupyterHandler
+from jupyter_server.base.websocket import WebSocketMixin
 from jupyter_server.extension.handler import ExtensionHandlerMixin
 from tornado import web
 from tornado.websocket import WebSocketHandler
@@ -242,19 +244,28 @@ class CloseHandler(_BaseHandler):
         self.reply({"ok": True})
 
 
-class StreamHandler(WebSocketHandler):
+class StreamHandler(WebSocketMixin, WebSocketHandler, JupyterHandler):
     """Per-chat duplex stream: client sends {"type":"prompt","text":...}; server
-    streams the harness's session/update events back as JSON."""
+    streams the harness's session/update events back as JSON.
+
+    Authenticated like jupyter_server's own websockets: `@ws_authenticated`
+    rejects an unauthenticated upgrade with 403, and `WebSocketMixin.check_origin`
+    enforces same-origin / allow_origin (no blanket allow)."""
 
     @property
     def manager(self):
         return self.settings["acp_manager"]
 
-    def check_origin(self, origin: str) -> bool:
-        # Localhost PoC; tighten when hardening for multi-origin deployment.
-        return True
+    def set_default_headers(self) -> None:
+        # Undo JupyterHandler's HTTP headers, which don't apply to a websocket.
+        pass
+
+    @ws_authenticated
+    async def get(self, chat_id: str):
+        return await super().get(chat_id)
 
     def open(self, chat_id: str) -> None:
+        super().open()  # WebSocketMixin: start the ping/pong keepalive
         self._chat_id = chat_id
         self._binding = self.manager.lookup(chat_id)
         self._listener = None

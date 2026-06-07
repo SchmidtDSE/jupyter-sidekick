@@ -147,6 +147,19 @@ def test_resume_unknown_chat_404(server):
     assert code == 404
 
 
+async def test_stream_websocket_rejects_unauthenticated(server):
+    # The streaming websocket must authenticate the upgrade like jupyter_server's
+    # own websockets — an unauthenticated connect is refused, not opened.
+    import tornado.websocket
+    from tornado.httpclient import HTTPClientError
+
+    base, _token = server
+    ws_url = base.replace("http://", "ws://") + "/jupyterlab_acp/chats/x/stream"
+    with pytest.raises(HTTPClientError) as exc:
+        await tornado.websocket.websocket_connect(ws_url)
+    assert exc.value.code in (401, 403)
+
+
 # --- resolve_cwd (pure; no server needed) -------------------------------------
 # Regression coverage for the 502 where an unexpanded/missing working directory
 # was reported as a "command not installed on PATH" launch failure.
