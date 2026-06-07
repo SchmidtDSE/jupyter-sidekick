@@ -12,8 +12,11 @@ asset rather than a hand-maintained list.
 """
 from __future__ import annotations
 
+import bz2
+import gzip
 import io
 import json
+import lzma
 import os
 import platform
 import shutil
@@ -28,7 +31,43 @@ from .registry import HarnessSpec
 
 REGISTRY_URL = "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json"
 _USER_AGENT = "jupyterlab-acp"
-_SUPPORTED_ARCHIVES = (".tar.gz", ".tgz", ".tar.bz2", ".tar.xz", ".tar", ".zip")
+# Multi-file archives we unpack into the cache dir (cmd points inside them).
+_ARCHIVE_SUFFIXES = (".tar.gz", ".tgz", ".tar.bz2", ".tar.xz", ".tar", ".zip")
+# Single-file compression: the decompressed bytes ARE the executable.
+_COMPRESSED_SUFFIXES = (".bz2", ".gz", ".xz")
+# Container/packaging formats we can't unpack — explicitly rejected so they're
+# never mistaken for a raw binary (below).
+_UNSUPPORTED_SUFFIXES = (".rar", ".7z", ".dmg", ".pkg", ".msi", ".deb", ".rpm", ".appimage")
+
+
+def _archive_kind(url: str) -> Optional[str]:
+    """Classify how to obtain the executable from `url`:
+
+    - ``"archive"`` — a multi-file archive to extract;
+    - ``"compressed"`` — a single compressed executable to decompress;
+    - ``"binary"`` — the raw executable, used as-is (e.g. xAI's Grok CLI, whose
+      URL has no archive extension, or a Windows ``.exe``);
+    - ``None`` — empty, or a packaging format we can't unpack.
+    """
+    if not url:
+        return None
+    if url.endswith(_ARCHIVE_SUFFIXES):
+        return "archive"
+    if url.endswith(_COMPRESSED_SUFFIXES):
+        return "compressed"
+    if url.lower().endswith(_UNSUPPORTED_SUFFIXES):
+        return None
+    return "binary"
+
+
+def _decompress(data: bytes, url: str) -> bytes:
+    if url.endswith(".bz2"):
+        return bz2.decompress(data)
+    if url.endswith(".gz"):
+        return gzip.decompress(data)
+    if url.endswith(".xz"):
+        return lzma.decompress(data)
+    return data
 
 _SYSTEMS = {"Linux": "linux", "Darwin": "darwin", "Windows": "windows"}
 _ARCHES = {"x86_64": "x86_64", "amd64": "x86_64", "aarch64": "aarch64", "arm64": "aarch64"}
@@ -88,16 +127,25 @@ def binary_spec(
     cache_root,
     download: Callable[[str], bytes] = _download_bytes,
 ) -> Optional[HarnessSpec]:
-    """Download + extract (cached) the platform binary and return a HarnessSpec,
-    or None if there's no supported archive for this platform."""
+    """Download (cached) the platform binary and return a HarnessSpec, or None
+    if there's no obtainable executable for this platform. Archives are
+    extracted; single-file ``.bz2``/``.gz``/``.xz`` are decompressed; a raw URL
+    (no archive extension, or ``.exe``) is downloaded as-is."""
     entry = agent.get("distribution", {}).get("binary", {}).get(plat)
-    if not entry or not entry.get("archive", "").endswith(_SUPPORTED_ARCHIVES):
+    archive = entry.get("archive", "") if entry else ""
+    kind = _archive_kind(archive)
+    if not entry or kind is None or not entry.get("cmd"):
         return None
     agent_id = agent["id"]
     dest = Path(cache_root) / agent_id / str(agent.get("version", "")) / plat
     cmd = (dest / entry["cmd"]).resolve()
     if not cmd.exists():
-        _extract(download(entry["archive"]), entry["archive"], dest)
+        data = download(archive)
+        if kind == "archive":
+            _extract(data, archive, dest)
+        else:  # "compressed" or "binary": the (decompressed) bytes are the executable
+            cmd.parent.mkdir(parents=True, exist_ok=True)
+            cmd.write_bytes(_decompress(data, archive))
     if not cmd.exists():
         return None
     mode = os.stat(cmd).st_mode
@@ -154,7 +202,8 @@ class AcpRegistry:
             return self._which("uvx") is not None
         if self._platform:
             entry = dist.get("binary", {}).get(self._platform)
-            return bool(entry and entry.get("archive", "").endswith(_SUPPORTED_ARCHIVES))
+            archive = entry.get("archive", "") if entry else ""
+            return bool(entry and entry.get("cmd") and _archive_kind(archive) is not None)
         return False
 
     def get(self, agent_id: str) -> Optional[Dict[str, Any]]:

@@ -31,7 +31,20 @@ SAMPLE = {
         {
             "id": "somebin",
             "name": "SomeBin",
-            "distribution": {"binary": {"linux-x86_64": {"archive": "u", "cmd": "bin/x"}}},
+            # A real container format we can't unpack → not launchable.
+            "distribution": {
+                "binary": {"linux-x86_64": {"archive": "https://x/somebin.dmg", "cmd": "bin/x"}}
+            },
+        },
+        {
+            "id": "rawbin",
+            "name": "RawBin",
+            # The xAI Grok pattern: the "archive" is the raw executable itself.
+            "distribution": {
+                "binary": {
+                    "linux-x86_64": {"archive": "https://x/grok-0.2.20-linux-x86_64", "cmd": "./grok-0.2.20-linux-x86_64"}
+                }
+            },
         },
     ],
 }
@@ -60,7 +73,8 @@ def test_registry_listing_and_spec_for():
     listing = {a["id"]: a for a in registry.listing()}
     assert listing["cline"]["launchable"] is True
     assert listing["cline"]["display_name"] == "Cline"
-    assert listing["somebin"]["launchable"] is False
+    assert listing["somebin"]["launchable"] is False  # .dmg: container we can't unpack
+    assert listing["rawbin"]["launchable"] is True  # raw executable, downloaded as-is
     assert registry.spec_for("cline").command == "npx"
     assert registry.spec_for("missing") is None
     # npx/uvx run on demand; binary distributions download + extract on first use.
@@ -129,3 +143,46 @@ def test_binary_unsupported_archive_not_launchable(tmp_path):
         "distribution": {"binary": {"linux-x86_64": {"archive": "https://x/x.rar", "cmd": "x"}}},
     }
     assert binary_spec(agent, "linux-x86_64", tmp_path, download=lambda url: b"") is None
+
+
+def test_binary_spec_raw_executable(tmp_path):
+    # The xAI Grok pattern: `archive` points straight at the executable (no
+    # archive extension), so we download it as-is and mark it runnable.
+    agent = {
+        "id": "grok",
+        "name": "Grok",
+        "version": "0.2.20",
+        "distribution": {
+            "binary": {
+                "linux-x86_64": {
+                    "archive": "https://x.ai/cli/grok-0.2.20-linux-x86_64",
+                    "cmd": "./grok-0.2.20-linux-x86_64",
+                }
+            }
+        },
+    }
+    payload = b"#!/bin/sh\necho grok\n"
+    spec = binary_spec(agent, "linux-x86_64", tmp_path, download=lambda url: payload)
+    assert spec is not None
+    assert spec.command.endswith("grok-0.2.20-linux-x86_64")
+    assert open(spec.command, "rb").read() == payload  # written verbatim, not unpacked
+    assert os.access(spec.command, os.X_OK)
+
+
+def test_binary_spec_single_file_bz2(tmp_path):
+    # A bare `.bz2` (not `.tar.bz2`) is a single compressed executable.
+    import bz2
+
+    agent = {
+        "id": "bzbin",
+        "name": "BzBin",
+        "version": "1.0",
+        "distribution": {
+            "binary": {"linux-x86_64": {"archive": "https://x/bzbin.bz2", "cmd": "bzbin"}}
+        },
+    }
+    payload = b"#!/bin/sh\necho bz\n"
+    spec = binary_spec(agent, "linux-x86_64", tmp_path, download=lambda url: bz2.compress(payload))
+    assert spec is not None
+    assert open(spec.command, "rb").read() == payload  # decompressed to the cmd path
+    assert os.access(spec.command, os.X_OK)
