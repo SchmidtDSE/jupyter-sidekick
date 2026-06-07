@@ -51,5 +51,8 @@
   "jupyterlab": {
     "extension": true,
     "outputDir": "jupyterlab_acp/labextension"
+  },
+  "resolutions": {
+    "license-webpack-plugin@^2.3.14": "patch:license-webpack-plugin@npm%3A2.3.21#./.yarn/patches/license-webpack-plugin-npm-2.3.21-74008160a2.patch"
   }
 }

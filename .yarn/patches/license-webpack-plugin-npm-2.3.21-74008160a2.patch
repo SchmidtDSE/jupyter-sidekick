@@ -1,0 +1,16 @@
+diff --git a/dist/WebpackModuleFileIterator.js b/dist/WebpackModuleFileIterator.js
+index c83402a9e46057f9a58a3a906a260586d21baf29..2ed5f280f181a0de8c63b2bf87e8aacc1e3013ab 100644
+--- a/dist/WebpackModuleFileIterator.js
++++ b/dist/WebpackModuleFileIterator.js
+@@ -44,7 +44,10 @@ var WebpackModuleFileIterator = /** @class */ (function () {
+             return tokens[tokens.length - 1];
+         }
+         if (filename.indexOf('provide module') === 0) {
+-            return filename.split('=')[1].trim();
++            // Some module-federation "provide module" identifiers carry no "=",
++            // so split('=')[1] is undefined; guard instead of crashing on .trim().
++            var provideParts = filename.split('=');
++            return provideParts.length > 1 ? provideParts[1].trim() : null;
+         }
+         if (filename.indexOf('consume-shared-module') === 0) {
+             var tokens = filename.split('|');

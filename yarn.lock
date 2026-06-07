@@ -1956,7 +1956,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"license-webpack-plugin@npm:^2.3.14":
+"license-webpack-plugin@npm:2.3.21":
   version: 2.3.21
   resolution: "license-webpack-plugin@npm:2.3.21"
   dependencies:
@@ -1966,6 +1966,19 @@ __metadata:
     webpack:
       optional: true
   checksum: 6208bd2060d200fbffbcc89702c929d50c5a4a3f2158b046cf813b3f7f728bbbe4611b9fea2d67843bb5e7d64ad9122cc368a19ac73f5c4ad41765e6283bdc0c
+  languageName: node
+  linkType: hard
+
+"license-webpack-plugin@patch:license-webpack-plugin@npm%3A2.3.21#./.yarn/patches/license-webpack-plugin-npm-2.3.21-74008160a2.patch::locator=jupyterlab-acp%40workspace%3A.":
+  version: 2.3.21
+  resolution: "license-webpack-plugin@patch:license-webpack-plugin@npm%3A2.3.21#./.yarn/patches/license-webpack-plugin-npm-2.3.21-74008160a2.patch::version=2.3.21&hash=176b15&locator=jupyterlab-acp%40workspace%3A."
+  dependencies:
+    "@types/webpack-sources": ^0.1.5
+    webpack-sources: ^1.2.0
+  peerDependenciesMeta:
+    webpack:
+      optional: true
+  checksum: 0f5762b866b285dca79a99ac8eff15967b96a929f1f2828176c064a415055a7a1eff5e0ed0d81dee8cc2c4590ebe9c4ecc7a3f3aaa74b33f5368aa8a9a112447
   languageName: node
   linkType: hard
 

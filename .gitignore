@@ -17,7 +17,11 @@ htmlcov/
 node_modules/
 lib/
 *.tsbuildinfo
-.yarn/
+# Ignore the yarn cache/state but keep committed patches — the resolutions entry
+# in package.json references .yarn/patches/, which CI needs at install time.
+.yarn/*
+!.yarn/patches
+.pnp.*
 # built labextension output
 */labextension/
 
