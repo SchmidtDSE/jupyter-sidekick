@@ -289,6 +289,76 @@
   color: var(--jp-content-font-color1);
 }
 
+/* Agent reasoning — de-emphasized, set apart from chat messages. */
+.jacp-thought {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 8px;
+  border-left: 2px solid var(--jp-border-color2);
+  color: var(--jp-content-font-color3);
+  font-style: italic;
+  white-space: pre-wrap;
+}
+
+.jacp-thought-label {
+  font-size: var(--jp-ui-font-size0);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Tool call — a compact card that updates in place as status changes. */
+.jacp-tool {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--jp-border-color2);
+  border-radius: 4px;
+  background: var(--jp-layout-color1);
+  font-size: var(--jp-ui-font-size0);
+}
+
+.jacp-tool-icon {
+  flex: 0 0 auto;
+}
+
+.jacp-tool-title {
+  flex: 1 1 auto;
+  color: var(--jp-content-font-color1);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jacp-tool-status {
+  flex: 0 0 auto;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: var(--jp-ui-font-size0);
+  color: var(--jp-content-font-color3);
+}
+
+.jacp-tool-completed {
+  border-color: var(--jp-success-color1, #4caf50);
+}
+
+.jacp-tool-completed .jacp-tool-status {
+  color: var(--jp-success-color1, #4caf50);
+}
+
+.jacp-tool-failed {
+  border-color: var(--jp-error-color1, #f44336);
+}
+
+.jacp-tool-failed .jacp-tool-status {
+  color: var(--jp-error-color1, #f44336);
+}
+
+.jacp-tool-in_progress .jacp-tool-status {
+  color: var(--jp-brand-color1);
+}
+
 .jacp-perm {
   flex: 0 0 auto;
   padding: 8px 10px;

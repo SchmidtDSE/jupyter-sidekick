@@ -90,4 +90,9 @@ export interface StreamEvent {
   state?: SessionStateSnapshot;
   /** 'resume_error' carries the failure message. */
   error?: string;
+  /** tool_call / tool_call_update fields (`kind` is the ToolKind: read/edit/…). */
+  tool_call_id?: string;
+  title?: string;
+  status?: string;
+  kind?: string;
 }

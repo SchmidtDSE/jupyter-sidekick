@@ -102,6 +102,26 @@ class FakeAgent(acp.Agent):
                     currentModeId=mode, sessionUpdate="current_mode_update"
                 ),
             )
+        elif incoming.startswith("EMIT_TOOL"):
+            # A reasoning chunk, then a tool call that goes pending -> completed.
+            await self._conn.session_update(
+                session_id=session_id,
+                update=acp.update_agent_thought_text("thinking it over"),
+            )
+            await self._conn.session_update(
+                session_id=session_id,
+                update=acp.update_tool_call(
+                    tool_call_id="tc1", title="Run tests", kind="execute", status="pending"
+                ),
+            )
+            await self._conn.session_update(
+                session_id=session_id,
+                update=acp.update_tool_call(tool_call_id="tc1", status="completed"),
+            )
+            await self._conn.session_update(
+                session_id=session_id,
+                update=acp.update_agent_message_text("done"),
+            )
         elif incoming.startswith("EMIT_CONFIG="):
             cid, val = incoming.split("=", 1)[1].split(":", 1)
             await self._conn.session_update(

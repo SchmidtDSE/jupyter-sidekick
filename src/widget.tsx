@@ -19,9 +19,28 @@ import {
   ToolCallInfo
 } from './types';
 
-interface Message {
-  role: 'user' | 'assistant';
-  text: string;
+// The transcript is an ordered list of items: chat messages, the agent's
+// reasoning ("thoughts"), and tool calls (which update in place by id).
+type TranscriptItem =
+  | { kind: 'message'; role: 'user' | 'assistant'; text: string }
+  | { kind: 'thought'; text: string }
+  | { kind: 'tool'; id: string; title: string; toolKind: string | null; status: string | null };
+
+const TOOL_GLYPHS: Record<string, string> = {
+  read: '📖',
+  edit: '✎',
+  delete: '🗑',
+  move: '↦',
+  search: '🔍',
+  execute: '❯',
+  think: '💭',
+  fetch: '🌐',
+  switch_mode: '⇄',
+  other: '•'
+};
+
+function toolGlyph(toolKind: string | null): string {
+  return (toolKind && TOOL_GLYPHS[toolKind]) || TOOL_GLYPHS.other;
 }
 
 interface PendingPermission {
@@ -168,7 +187,7 @@ function ChatComponent(): JSX.Element {
   const [chatId, setChatId] = useState<string | null>(null);
   const [state, setState] = useState<SessionStateSnapshot | null>(null);
   const [commands, setCommands] = useState<AcpCommand[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [items, setItems] = useState<TranscriptItem[]>([]);
   const [input, setInput] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<boolean>(false);
@@ -210,14 +229,58 @@ function ChatComponent(): JSX.Element {
 
   // Append a streamed chunk to the last message of the same role, or start a
   // new one. Used for live agent output and for replayed turns on resume.
-  const appendChunk = (role: Message['role'], text: string): void => {
-    setMessages(prev => {
+  const appendMessage = (role: 'user' | 'assistant', text: string): void => {
+    setItems(prev => {
       const next = prev.slice();
       const last = next[next.length - 1];
-      if (last && last.role === role) {
+      if (last && last.kind === 'message' && last.role === role) {
         next[next.length - 1] = { ...last, text: last.text + text };
       } else {
-        next.push({ role, text });
+        next.push({ kind: 'message', role, text });
+      }
+      return next;
+    });
+  };
+
+  // Accumulate the agent's reasoning into a single trailing thought block.
+  const appendThought = (text: string): void => {
+    setItems(prev => {
+      const next = prev.slice();
+      const last = next[next.length - 1];
+      if (last && last.kind === 'thought') {
+        next[next.length - 1] = { ...last, text: last.text + text };
+      } else {
+        next.push({ kind: 'thought', text });
+      }
+      return next;
+    });
+  };
+
+  // Insert a tool call, or merge a partial update onto the existing one by id.
+  const upsertTool = (ev: StreamEvent): void => {
+    const toolId = ev.tool_call_id;
+    if (!toolId) {
+      return;
+    }
+    setItems(prev => {
+      const next = prev.slice();
+      const idx = next.findIndex(it => it.kind === 'tool' && it.id === toolId);
+      if (idx >= 0) {
+        const cur = next[idx] as Extract<TranscriptItem, { kind: 'tool' }>;
+        next[idx] = {
+          ...cur,
+          title: ev.title ?? cur.title,
+          toolKind: ev.kind ?? cur.toolKind,
+          status: ev.status ?? cur.status
+        };
+      } else {
+        next.push({
+          kind: 'tool',
+          id: toolId,
+          title: ev.title ?? 'tool call',
+          toolKind: ev.kind ?? null,
+          status: ev.status ?? null
+        });
       }
       return next;
     });
@@ -225,10 +288,14 @@ function ChatComponent(): JSX.Element {
 
   const onEvent = (ev: StreamEvent): void => {
     if (ev.type === 'agent_message_chunk' && ev.text != null) {
-      appendChunk('assistant', ev.text);
+      appendMessage('assistant', ev.text);
     } else if (ev.type === 'user_message_chunk' && ev.text != null) {
       // Replayed prior user turns when resuming a session.
-      appendChunk('user', ev.text);
+      appendMessage('user', ev.text);
+    } else if (ev.type === 'agent_thought_chunk' && ev.text != null) {
+      appendThought(ev.text);
+    } else if (ev.type === 'tool_call' || ev.type === 'tool_call_update') {
+      upsertTool(ev);
     } else if (ev.type === 'resumed') {
       // load_session finished; adopt the now-populated capability snapshot.
       if (ev.state) {
@@ -332,7 +399,7 @@ function ChatComponent(): JSX.Element {
       .catch(() => undefined);
     setChatId(null);
     setState(null);
-    setMessages([]);
+    setItems([]);
     setCommands([]);
     setBoundAgent(null);
     setPermission(null);
@@ -347,7 +414,11 @@ function ChatComponent(): JSX.Element {
     if (!text || !streamRef.current) {
       return;
     }
-    setMessages(prev => [...prev, { role: 'user', text }, { role: 'assistant', text: '' }]);
+    setItems(prev => [
+      ...prev,
+      { kind: 'message', role: 'user', text },
+      { kind: 'message', role: 'assistant', text: '' }
+    ]);
     streamRef.current.prompt(text);
     setInput('');
     setBusy(true);
@@ -497,12 +568,31 @@ function ChatComponent(): JSX.Element {
         </div>
       )}
       <div className="jacp-messages">
-        {messages.map((m, i) => (
-          <div key={i} className={`jacp-msg jacp-${m.role}`}>
-            <span className="jacp-role">{m.role}</span>
-            <span className="jacp-text">{m.text}</span>
-          </div>
-        ))}
+        {items.map((it, i) => {
+          if (it.kind === 'message') {
+            return (
+              <div key={i} className={`jacp-msg jacp-${it.role}`}>
+                <span className="jacp-role">{it.role}</span>
+                <span className="jacp-text">{it.text}</span>
+              </div>
+            );
+          }
+          if (it.kind === 'thought') {
+            return (
+              <div key={i} className="jacp-thought">
+                <span className="jacp-thought-label">thinking</span>
+                <span className="jacp-text">{it.text}</span>
+              </div>
+            );
+          }
+          return (
+            <div key={i} className={`jacp-tool jacp-tool-${it.status ?? 'pending'}`}>
+              <span className="jacp-tool-icon">{toolGlyph(it.toolKind)}</span>
+              <span className="jacp-tool-title">{it.title}</span>
+              {it.status && <span className="jacp-tool-status">{it.status}</span>}
+            </div>
+          );
+        })}
       </div>
       {permission && (
         <div className="jacp-perm">

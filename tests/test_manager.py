@@ -82,6 +82,34 @@ async def test_close_absent_chat_is_noop():
     await manager.close("never-bound")
 
 
+async def test_prompt_streams_thought_and_tool_call_updates():
+    import asyncio
+
+    from jupyterlab_acp.serialize import update_to_json
+
+    manager = BindingManager(_registry())
+    binding = await manager.bind("chat-1", "fake", cwd=HERE)
+    seen = []
+    binding.session.client.add_update_listener(lambda sid, u: seen.append(update_to_json(u)))
+    try:
+        await binding.session.prompt("EMIT_TOOL")
+        await asyncio.sleep(0.3)  # let trailing notifications drain
+    finally:
+        await manager.close_all()
+    assert seen == [
+        {"type": "agent_thought_chunk", "text": "thinking it over"},
+        {
+            "type": "tool_call_update",
+            "tool_call_id": "tc1",
+            "title": "Run tests",
+            "kind": "execute",
+            "status": "pending",
+        },
+        {"type": "tool_call_update", "tool_call_id": "tc1", "status": "completed"},
+        {"type": "agent_message_chunk", "text": "done"},
+    ]
+
+
 async def test_bind_for_resume_defers_load_then_reloads():
     manager = BindingManager(_registry())
     spec = manager.registry.get("fake")

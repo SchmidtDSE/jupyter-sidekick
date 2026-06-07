@@ -52,7 +52,42 @@ def test_user_message_chunk_carries_text():
     assert out == {"type": "user_message_chunk", "text": "prior question"}
 
 
+def test_tool_call_update_carries_fields():
+    # update_tool_call builds a ToolCallProgress (a tool_call_update).
+    out = update_to_json(
+        acp.update_tool_call(tool_call_id="t1", title="Run tests", kind="execute", status="pending")
+    )
+    assert out == {
+        "type": "tool_call_update",
+        "tool_call_id": "t1",
+        "title": "Run tests",
+        "kind": "execute",
+        "status": "pending",
+    }
+
+
+def test_tool_call_update_omits_absent_fields():
+    # A partial update (status only) keyed by tool_call_id; absent fields dropped.
+    prog = S.ToolCallProgress(toolCallId="t1", status="completed", sessionUpdate="tool_call_update")
+    assert update_to_json(prog) == {
+        "type": "tool_call_update",
+        "tool_call_id": "t1",
+        "status": "completed",
+    }
+
+
+def test_initial_tool_call_carries_fields():
+    call = S.ToolCall(toolCallId="t2", title="Edit file", kind="edit", status="in_progress")
+    assert update_to_json(call) == {
+        "type": "tool_call",
+        "tool_call_id": "t2",
+        "title": "Edit file",
+        "kind": "edit",
+        "status": "in_progress",
+    }
+
+
 def test_unhandled_update_falls_back_to_type_tag():
-    # Tool-call updates aren't specially handled yet; serializer still tags type.
-    out = update_to_json(acp.update_tool_call(tool_call_id="t1", title="Run tests"))
-    assert out == {"type": "tool_call_update"}
+    # Plan updates aren't specially handled yet; serializer still tags the type.
+    out = update_to_json(acp.update_plan(entries=[]))
+    assert out == {"type": "plan"}
