@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "jupyterlab-acp"
-version = "0.0.1"
+version = "0.1.0"
 description = "Jupyter-native access to coding agents over the Agent Client Protocol (ACP): per-chat single-agent binding."
 readme = "README.md"
 license = { text = "BSD-3-Clause" }

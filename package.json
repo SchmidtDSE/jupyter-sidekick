@@ -1,6 +1,6 @@
 {
   "name": "jupyterlab-acp",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Zed-style ACP chat for JupyterLab: per-chat single-agent binding.",
   "license": "BSD-3-Clause",
   "author": "Carl Boettiger",
