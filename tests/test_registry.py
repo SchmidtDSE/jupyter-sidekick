@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from jupyterlab_acp.registry import (
+from jupyter_acp_chat.registry import (
     HarnessNotFoundError,
     HarnessRegistry,
     HarnessSpec,

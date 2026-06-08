@@ -6,8 +6,8 @@ import asyncio
 import os
 import sys
 
-from jupyterlab_acp.acp_client import HarnessClient
-from jupyterlab_acp.harness import HarnessSession
+from jupyter_acp_chat.acp_client import HarnessClient
+from jupyter_acp_chat.harness import HarnessSession
 
 FAKE_AGENT = os.path.join(os.path.dirname(__file__), "fake_agent.py")
 

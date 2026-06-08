@@ -1916,9 +1916,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jupyterlab-acp@workspace:.":
+"jupyter-acp-chat@workspace:.":
   version: 0.0.0-use.local
-  resolution: "jupyterlab-acp@workspace:."
+  resolution: "jupyter-acp-chat@workspace:."
   dependencies:
     "@jupyterlab/application": ^4.2.0
     "@jupyterlab/apputils": ^4.3.0
@@ -1969,9 +1969,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"license-webpack-plugin@patch:license-webpack-plugin@npm%3A2.3.21#./.yarn/patches/license-webpack-plugin-npm-2.3.21-74008160a2.patch::locator=jupyterlab-acp%40workspace%3A.":
+"license-webpack-plugin@patch:license-webpack-plugin@npm%3A2.3.21#./.yarn/patches/license-webpack-plugin-npm-2.3.21-74008160a2.patch::locator=jupyter-acp-chat%40workspace%3A.":
   version: 2.3.21
-  resolution: "license-webpack-plugin@patch:license-webpack-plugin@npm%3A2.3.21#./.yarn/patches/license-webpack-plugin-npm-2.3.21-74008160a2.patch::version=2.3.21&hash=176b15&locator=jupyterlab-acp%40workspace%3A."
+  resolution: "license-webpack-plugin@patch:license-webpack-plugin@npm%3A2.3.21#./.yarn/patches/license-webpack-plugin-npm-2.3.21-74008160a2.patch::version=2.3.21&hash=176b15&locator=jupyter-acp-chat%40workspace%3A."
   dependencies:
     "@types/webpack-sources": ^0.1.5
     webpack-sources: ^1.2.0

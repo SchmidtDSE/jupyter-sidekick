@@ -6,7 +6,7 @@ import io
 import os
 import tarfile
 
-from jupyterlab_acp.acp_registry import (
+from jupyter_acp_chat.acp_registry import (
     AcpRegistry,
     binary_spec,
     platform_key,

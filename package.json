@@ -1,10 +1,10 @@
 {
-  "name": "jupyterlab-acp",
+  "name": "jupyter-acp-chat",
   "version": "0.2.0",
   "description": "Zed-style ACP chat for JupyterLab: per-chat single-agent binding.",
   "license": "BSD-3-Clause",
   "author": "Carl Boettiger",
-  "homepage": "https://github.com/SchmidtDSE/jupyterlab-acp",
+  "homepage": "https://github.com/SchmidtDSE/jupyter-acp-chat",
   "keywords": [
     "jupyter",
     "jupyterlab",
@@ -29,7 +29,7 @@
     "build:labextension:dev": "jupyter labextension build --development True .",
     "build:lib": "tsc --sourceMap",
     "build:lib:prod": "tsc",
-    "clean": "rimraf lib tsconfig.tsbuildinfo jupyterlab_acp/labextension"
+    "clean": "rimraf lib tsconfig.tsbuildinfo jupyter_acp_chat/labextension"
   },
   "dependencies": {
     "@jupyterlab/application": "^4.2.0",
@@ -50,7 +50,7 @@
   },
   "jupyterlab": {
     "extension": true,
-    "outputDir": "jupyterlab_acp/labextension"
+    "outputDir": "jupyter_acp_chat/labextension"
   },
   "resolutions": {
     "license-webpack-plugin@^2.3.14": "patch:license-webpack-plugin@npm%3A2.3.21#./.yarn/patches/license-webpack-plugin-npm-2.3.21-74008160a2.patch"

@@ -1,9 +1,9 @@
 ---
-title: jupyterlab-acp
+title: jupyter-acp-chat
 description: A per-chat, single-agent ACP experience in JupyterLab.
 ---
 
-# jupyterlab-acp
+# jupyter-acp-chat
 
 Jupyter-native access to coding agents over the
 [Agent Client Protocol (ACP)](https://agentclientprotocol.com) — a per-chat,

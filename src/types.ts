@@ -1,4 +1,4 @@
-// Types mirroring the jupyterlab_acp server payloads.
+// Types mirroring the jupyter_acp_chat server payloads.
 
 export interface ModelOption {
   id: string;
@@ -37,7 +37,7 @@ export interface ToolCallInfo {
   status?: string | null;
 }
 
-/** Response of GET /jupyterlab_acp/chats/<id>/state */
+/** Response of GET /jupyter_acp_chat/chats/<id>/state */
 export interface SessionStateSnapshot {
   harness_id: string | null;
   available_models?: ModelOption[];
@@ -48,7 +48,7 @@ export interface SessionStateSnapshot {
   available_commands?: AcpCommand[];
 }
 
-/** Entry of GET /jupyterlab_acp/harnesses */
+/** Entry of GET /jupyter_acp_chat/harnesses */
 export interface HarnessInfo {
   id: string;
   display_name: string;
@@ -56,7 +56,7 @@ export interface HarnessInfo {
   available?: boolean;
 }
 
-/** Entry of GET /jupyterlab_acp/registry (the shared ACP Agent Registry). */
+/** Entry of GET /jupyter_acp_chat/registry (the shared ACP Agent Registry). */
 export interface RegistryAgent {
   id: string;
   display_name: string;
@@ -67,7 +67,7 @@ export interface RegistryAgent {
   requires_download: boolean;
 }
 
-/** Entry of GET /jupyterlab_acp/chats — a resumable prior chat. */
+/** Entry of GET /jupyter_acp_chat/chats — a resumable prior chat. */
 export interface ChatRecord {
   chat_id: string;
   harness_id: string;

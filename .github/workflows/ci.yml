@@ -26,8 +26,8 @@ jobs:
 
       - name: Verify extensions are discovered
         run: |
-          jupyter server extension list 2>&1 | grep -i "jupyterlab_acp.*OK"
-          jupyter labextension list 2>&1 | grep -i "jupyterlab-acp.*OK"
+          jupyter server extension list 2>&1 | grep -i "jupyter_acp_chat.*OK"
+          jupyter labextension list 2>&1 | grep -i "jupyter-acp-chat.*OK"
 
       - name: Run Python tests
         run: python -m pytest -q

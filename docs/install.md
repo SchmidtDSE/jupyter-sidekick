@@ -10,7 +10,7 @@ Requires JupyterLab ≥ 4.2 and at least one ACP agent on your `PATH` — e.g.
 demand via `npx`/`uvx`/downloaded binary.
 
 ```bash
-pip install jupyterlab-acp
+pip install jupyter-acp-chat
 ```
 
 The wheel ships the prebuilt labextension, so that's all you need — launch
@@ -21,8 +21,8 @@ The wheel ships the prebuilt labextension, so that's all you need — launch
 JupyterLab is needed at build time to compile the extension.
 
 ```bash
-git clone https://github.com/SchmidtDSE/jupyterlab-acp
-cd jupyterlab-acp
+git clone https://github.com/SchmidtDSE/jupyter-acp-chat
+cd jupyter-acp-chat
 pip install jupyterlab hatchling hatch-jupyter-builder editables   # build tooling (jlpm)
 jlpm install && jlpm build
 pip install -e . --no-build-isolation                              # hook reuses the built JS

@@ -1,4 +1,4 @@
-# jupyterlab-acp
+# jupyter-acp-chat
 
 Jupyter-native access to coding agents over the
 [Agent Client Protocol (ACP)](https://agentclientprotocol.com) — a per-chat,
@@ -6,29 +6,29 @@ single-agent experience in JupyterLab, with capability-driven model/mode
 selectors and slash-command + skill support that comes straight from whatever
 ACP agent ("harness") you bind a chat to.
 
-[![PyPI](https://img.shields.io/pypi/v/jupyterlab-acp.svg)](https://pypi.org/project/jupyterlab-acp/)
-[![CI](https://github.com/SchmidtDSE/jupyterlab-acp/actions/workflows/ci.yml/badge.svg)](https://github.com/SchmidtDSE/jupyterlab-acp/actions/workflows/ci.yml)
-[![Docs](https://img.shields.io/badge/docs-schmidtdse.github.io-blue)](https://schmidtdse.github.io/jupyterlab-acp/)
+[![PyPI](https://img.shields.io/pypi/v/jupyter-acp-chat.svg)](https://pypi.org/project/jupyter-acp-chat/)
+[![CI](https://github.com/SchmidtDSE/jupyter-acp-chat/actions/workflows/ci.yml/badge.svg)](https://github.com/SchmidtDSE/jupyter-acp-chat/actions/workflows/ci.yml)
+[![Docs](https://img.shields.io/badge/docs-schmidtdse.github.io-blue)](https://schmidtdse.github.io/jupyter-acp-chat/)
 
 > **Status: early but working.** A functioning JupyterLab extension: open a chat
 > in the sidebar (or as draggable main-area tabs), bind an agent, switch
 > models/modes, run slash commands, approve tool calls, and watch it edit your
 > open notebook live. Rough edges remain — see [Limitations](#limitations).
 
-📖 **[Documentation](https://schmidtdse.github.io/jupyterlab-acp/)** — install,
+📖 **[Documentation](https://schmidtdse.github.io/jupyter-acp-chat/)** — install,
 usage, architecture, and the design rationale.
 
 ## Install
 
 ```bash
-pip install jupyterlab-acp
+pip install jupyter-acp-chat
 ```
 
 Requires JupyterLab ≥ 4.2 and at least one ACP agent on your `PATH` — e.g.
 `claude-agent-acp` (Claude Code) or `opencode` — or any agent from the
 [ACP registry](https://github.com/agentclientprotocol/registry), which runs on
 demand. Then launch `jupyter lab`. For a development install from source, see
-the [docs](https://schmidtdse.github.io/jupyterlab-acp/install).
+the [docs](https://schmidtdse.github.io/jupyter-acp-chat/install).
 
 ## Use
 
@@ -76,7 +76,7 @@ standalone app.
 
 ## How it's built
 
-`jupyterlab-acp` is deliberately a thin, additive layer on open standards:
+`jupyter-acp-chat` is deliberately a thin, additive layer on open standards:
 
 - **[`agent-client-protocol`](https://agentclientprotocol.com)** — the official
   ACP Python library (the same one every ACP client builds on). All agent
@@ -107,7 +107,7 @@ on it is how we honor that work. We're grateful for it.
 A working proof-of-concept — the same idea built *inside* a fork of
 `jupyterlab/jupyter-ai`, on top of the `jupyter-ai` stack — lives at
 [`cboettig/jupyter-ai@acp-bridge-impl`](https://github.com/cboettig/jupyter-ai/tree/acp-bridge-impl/jupyter-ai-acp-bridge).
-`jupyterlab-acp` is the ground-up redesign that sheds those dependencies; the PoC
+`jupyter-acp-chat` is the ground-up redesign that sheds those dependencies; the PoC
 remains a useful empirical reference for how each piece behaves.
 
 ## Context
@@ -140,7 +140,7 @@ python -m pytest                  # 37 tests: ACP core, capabilities, binding,
 jlpm build                        # run this after every JavaScript change to rebuild
 ```
 
-Layout: `jupyterlab_acp/` is the Python server extension (ACP session/binding +
+Layout: `jupyter_acp_chat/` is the Python server extension (ACP session/binding +
 REST/websocket handlers, on `agent-client-protocol`); `src/` is the TypeScript
 labextension (React chat panel); `tests/` and `validation/` hold the suite and
 the Step-0 notebook-reflection check.

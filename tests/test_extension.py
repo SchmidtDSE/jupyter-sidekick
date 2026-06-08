@@ -1,7 +1,7 @@
 """The harness registry the server extension wires up (incl. user config)."""
 from __future__ import annotations
 
-from jupyterlab_acp.extension import DEFAULT_HARNESSES, build_default_registry, build_registry
+from jupyter_acp_chat.extension import DEFAULT_HARNESSES, build_default_registry, build_registry
 
 
 def test_default_registry_includes_claude_code():
@@ -33,9 +33,9 @@ def test_build_registry_adds_and_overrides_by_id():
 
 
 def test_extension_points_reference_the_app_class():
-    from jupyterlab_acp import _jupyter_server_extension_points
-    from jupyterlab_acp.extension import AcpExtension
+    from jupyter_acp_chat import _jupyter_server_extension_points
+    from jupyter_acp_chat.extension import AcpExtension
 
     point = _jupyter_server_extension_points()[0]
-    assert point["module"] == "jupyterlab_acp.extension"
+    assert point["module"] == "jupyter_acp_chat.extension"
     assert point["app"] is AcpExtension  # the class, not a string

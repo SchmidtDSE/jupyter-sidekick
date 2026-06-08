@@ -31,7 +31,7 @@ def _free_port() -> int:
 
 
 def _request(base, token, path, method="GET", body=None, auth=True):
-    url = f"{base}/jupyterlab_acp/{path}"
+    url = f"{base}/jupyter_acp_chat/{path}"
     headers = {}
     if auth:
         headers["Authorization"] = f"token {token}"
@@ -154,7 +154,7 @@ async def test_stream_websocket_rejects_unauthenticated(server):
     from tornado.httpclient import HTTPClientError
 
     base, _token = server
-    ws_url = base.replace("http://", "ws://") + "/jupyterlab_acp/chats/x/stream"
+    ws_url = base.replace("http://", "ws://") + "/jupyter_acp_chat/chats/x/stream"
     with pytest.raises(HTTPClientError) as exc:
         await tornado.websocket.websocket_connect(ws_url)
     assert exc.value.code in (401, 403)
@@ -163,7 +163,7 @@ async def test_stream_websocket_rejects_unauthenticated(server):
 # --- resolve_cwd (pure; no server needed) -------------------------------------
 # Regression coverage for the 502 where an unexpanded/missing working directory
 # was reported as a "command not installed on PATH" launch failure.
-from jupyterlab_acp.handlers import resolve_cwd  # noqa: E402
+from jupyter_acp_chat.handlers import resolve_cwd  # noqa: E402
 
 _HOME_PROJ = os.path.expanduser("~/proj")
 

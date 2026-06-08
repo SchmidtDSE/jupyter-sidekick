@@ -9,8 +9,8 @@ import { LabIcon } from '@jupyterlab/ui-components';
 
 import { AcpChatPanel } from './widget';
 
-const OPEN = 'jupyterlab-acp:open';
-const NEW = 'jupyterlab-acp:new-chat';
+const OPEN = 'jupyter-acp-chat:open';
+const NEW = 'jupyter-acp-chat:new-chat';
 
 // Inlined (rather than importing a .svg module) so the production labextension
 // build's license-webpack-plugin doesn't choke on an asset module.
@@ -24,12 +24,12 @@ const ACP_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24
 </svg>`;
 
 export const acpIcon = new LabIcon({
-  name: 'jupyterlab-acp:icon',
+  name: 'jupyter-acp-chat:icon',
   svgstr: ACP_ICON_SVG
 });
 
 const plugin: JupyterFrontEndPlugin<void> = {
-  id: 'jupyterlab-acp:plugin',
+  id: 'jupyter-acp-chat:plugin',
   description: 'Zed-style ACP chat for JupyterLab.',
   autoStart: true,
   optional: [ICommandPalette, ILauncher, ILayoutRestorer],
@@ -45,12 +45,12 @@ const plugin: JupyterFrontEndPlugin<void> = {
     const ensureSidebar = (): AcpChatPanel => {
       if (sidebar === null || sidebar.isDisposed) {
         sidebar = new AcpChatPanel();
-        sidebar.id = 'jupyterlab-acp-sidebar';
+        sidebar.id = 'jupyter-acp-chat-sidebar';
         sidebar.title.icon = acpIcon;
         sidebar.title.caption = 'ACP Chat'; // tooltip only — no text label
         app.shell.add(sidebar, 'left', { rank: 900 });
         if (restorer) {
-          restorer.add(sidebar, 'jupyterlab-acp-sidebar');
+          restorer.add(sidebar, 'jupyter-acp-chat-sidebar');
         }
       }
       return sidebar;
@@ -62,7 +62,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     const newMainChat = (): void => {
       counter += 1;
       const panel = new AcpChatPanel();
-      panel.id = `jupyterlab-acp-chat-${Date.now()}-${counter}`;
+      panel.id = `jupyter-acp-chat-chat-${Date.now()}-${counter}`;
       panel.title.icon = acpIcon;
       panel.title.label = `ACP Chat ${counter}`;
       panel.title.closable = true;
