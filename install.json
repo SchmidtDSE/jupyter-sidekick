@@ -1,5 +1,5 @@
 {
   "packageManager": "python",
-  "packageName": "jupyterlab_acp",
-  "uninstallInstructions": "Use pip to uninstall the jupyterlab-acp package."
+  "packageName": "jupyter_sidekick",
+  "uninstallInstructions": "Use pip to uninstall the jupyter-sidekick package."
 }

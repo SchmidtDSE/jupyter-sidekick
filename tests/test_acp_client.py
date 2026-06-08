@@ -1,7 +1,7 @@
 """HarnessClient listener management (needed so a websocket can detach cleanly)."""
 from __future__ import annotations
 
-from jupyterlab_acp.acp_client import HarnessClient
+from jupyter_sidekick.acp_client import HarnessClient
 
 
 async def test_listener_receives_then_stops_after_removal():

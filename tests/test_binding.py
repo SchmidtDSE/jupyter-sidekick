@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from jupyterlab_acp.binding import AlreadyBoundError, ChatBinding, NotBoundError
+from jupyter_sidekick.binding import AlreadyBoundError, ChatBinding, NotBoundError
 
 
 class _FakeSession:

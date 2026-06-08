@@ -1,8 +1,8 @@
 version: 1
 project:
-  title: jupyterlab-acp
+  title: jupyter-sidekick
   description: Jupyter-native access to coding agents over the Agent Client Protocol (ACP).
-  github: https://github.com/SchmidtDSE/jupyterlab-acp
+  github: https://github.com/SchmidtDSE/jupyter-sidekick
   toc:
     - file: index.md
     - file: install.md
