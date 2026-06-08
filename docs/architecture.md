@@ -1,11 +1,11 @@
 ---
 title: Architecture
-description: How jupyterlab-acp is put together — module map, data flows, and the non-obvious decisions.
+description: How jupyter-sidekick is put together — module map, data flows, and the non-obvious decisions.
 ---
 
 # Architecture
 
-`jupyterlab-acp` is a Jupyter Server extension (Python) plus a JupyterLab
+`jupyter-sidekick` is a Jupyter Server extension (Python) plus a JupyterLab
 labextension (TypeScript/React), built on three open pieces and **nothing from
 the `jupyter_ai_*` stack**:
 
@@ -18,10 +18,10 @@ the `jupyter_ai_*` stack**:
 
 ```
 browser (React panel)
-   │  REST: /jupyterlab_acp/harnesses, /registry, /chats/<id>/{bind,state,model,mode,config-option}
-   │  WebSocket: /jupyterlab_acp/chats/<id>/stream   (prompts out, session/update events in)
+   │  REST: /jupyter_sidekick/harnesses, /registry, /chats/<id>/{bind,state,model,mode,config-option}
+   │  WebSocket: /jupyter_sidekick/chats/<id>/stream   (prompts out, session/update events in)
    ▼
-jupyterlab_acp server extension
+jupyter_sidekick server extension
    BindingManager → ChatBinding → HarnessSession
                                       │  Agent Client Protocol (JSON-RPC over stdio)
                                       ▼
@@ -31,7 +31,7 @@ jupyterlab_acp server extension
                           jupyter-server-documents → reflects into your open notebook
 ```
 
-## Python package (`jupyterlab_acp/`)
+## Python package (`jupyter_sidekick/`)
 
 | Module | Role |
 |---|---|

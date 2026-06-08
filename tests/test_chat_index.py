@@ -4,8 +4,8 @@ from __future__ import annotations
 import json
 import os
 
-from jupyterlab_acp import chat_index as ci_mod
-from jupyterlab_acp.chat_index import ChatIndex
+from jupyter_sidekick import chat_index as ci_mod
+from jupyter_sidekick.chat_index import ChatIndex
 
 
 def _ticking_clock(monkeypatch, start=1000.0):

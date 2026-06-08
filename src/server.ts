@@ -6,7 +6,7 @@ import { ServerConnection } from '@jupyterlab/services';
 
 import { AcpApi } from './api';
 
-const NAMESPACE = 'jupyterlab_acp';
+const NAMESPACE = 'jupyter_sidekick';
 
 export function makeApi(): AcpApi {
   const settings = ServerConnection.makeSettings();

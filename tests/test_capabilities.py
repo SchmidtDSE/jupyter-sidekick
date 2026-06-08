@@ -6,7 +6,7 @@ import asyncio
 import os
 import sys
 
-from jupyterlab_acp.harness import HarnessSession
+from jupyter_sidekick.harness import HarnessSession
 from tests.fake_agent import CONFIG_BOOL, CURRENT_MODE, CURRENT_MODEL, MODELS, MODES
 
 FAKE_AGENT = os.path.join(os.path.dirname(__file__), "fake_agent.py")

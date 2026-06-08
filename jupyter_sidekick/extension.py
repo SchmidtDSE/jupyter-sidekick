@@ -83,11 +83,11 @@ def default_chat_index_path() -> str:
     """Per-server JSON index location, under the Jupyter data dir."""
     from jupyter_core.paths import jupyter_data_dir
 
-    return os.path.join(jupyter_data_dir(), "jupyterlab_acp", "chats.json")
+    return os.path.join(jupyter_data_dir(), "jupyter_sidekick", "chats.json")
 
 
 class AcpExtension(ExtensionApp):
-    name = "jupyterlab_acp"
+    name = "jupyter_sidekick"
 
     harnesses = ListTrait(
         DictTrait(),

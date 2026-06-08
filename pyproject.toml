@@ -6,7 +6,7 @@ requires = [
 build-backend = "hatchling.build"
 
 [project]
-name = "jupyterlab-acp"
+name = "jupyter-sidekick"
 version = "0.2.0"
 description = "Jupyter-native access to coding agents over the Agent Client Protocol (ACP): per-chat single-agent binding."
 readme = "README.md"
@@ -38,35 +38,35 @@ test = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/SchmidtDSE/jupyterlab-acp"
-Issues = "https://github.com/SchmidtDSE/jupyterlab-acp/issues"
+Homepage = "https://github.com/SchmidtDSE/jupyter-sidekick"
+Issues = "https://github.com/SchmidtDSE/jupyter-sidekick/issues"
 
 [project.entry-points."jupyter_server.extension_points"]
-jupyterlab_acp = "jupyterlab_acp"
+jupyter_sidekick = "jupyter_sidekick"
 
 [tool.hatch.build.targets.wheel]
-packages = ["jupyterlab_acp"]
+packages = ["jupyter_sidekick"]
 
 [tool.hatch.build.targets.sdist]
 # Ship the prebuilt labextension in the sdist so downstream builds (e.g.
 # conda-forge) are self-contained: `skip-if-exists` below then skips the npm
 # build, so no Node/network is needed to install from the sdist.
-artifacts = ["jupyterlab_acp/labextension"]
+artifacts = ["jupyter_sidekick/labextension"]
 
 [tool.hatch.build.targets.wheel.shared-data]
-"jupyter-config/jupyter_server_config.d/jupyterlab_acp.json" = "etc/jupyter/jupyter_server_config.d/jupyterlab_acp.json"
+"jupyter-config/jupyter_server_config.d/jupyter_sidekick.json" = "etc/jupyter/jupyter_server_config.d/jupyter_sidekick.json"
 # The built labextension dir already contains install.json, so it ships via the
 # mapping below — no separate install.json entry (that would duplicate it).
-"jupyterlab_acp/labextension" = "share/jupyter/labextensions/jupyterlab-acp"
+"jupyter_sidekick/labextension" = "share/jupyter/labextensions/jupyter-sidekick"
 
 [tool.hatch.build.hooks.jupyter-builder]
 dependencies = ["hatch-jupyter-builder>=0.5"]
 build-function = "hatch_jupyter_builder.npm_builder"
 ensured-targets = [
-  "jupyterlab_acp/labextension/static/style.js",
-  "jupyterlab_acp/labextension/package.json",
+  "jupyter_sidekick/labextension/static/style.js",
+  "jupyter_sidekick/labextension/package.json",
 ]
-skip-if-exists = ["jupyterlab_acp/labextension/static/style.js"]
+skip-if-exists = ["jupyter_sidekick/labextension/static/style.js"]
 
 [tool.hatch.build.hooks.jupyter-builder.build-kwargs]
 # Production build: minified bundle + third-party license aggregation. The

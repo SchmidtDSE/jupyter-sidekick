@@ -30,7 +30,7 @@ from typing import Any, Callable, Dict, List, Optional
 from .registry import HarnessSpec
 
 REGISTRY_URL = "https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json"
-_USER_AGENT = "jupyterlab-acp"
+_USER_AGENT = "jupyter-sidekick"
 # Multi-file archives we unpack into the cache dir (cmd points inside them).
 _ARCHIVE_SUFFIXES = (".tar.gz", ".tgz", ".tar.bz2", ".tar.xz", ".tar", ".zip")
 # Single-file compression: the decompressed bytes ARE the executable.
@@ -171,7 +171,7 @@ class AcpRegistry:
     ) -> None:
         self._url = url
         self._fetch = fetch or self._default_fetch
-        self._cache_root = Path(cache_root or Path.home() / ".cache" / "jupyterlab-acp" / "agents")
+        self._cache_root = Path(cache_root or Path.home() / ".cache" / "jupyter-sidekick" / "agents")
         self._platform = current_platform_key()
         self._which = which  # resolve a runtime (npx/uvx) on PATH; injectable for tests
         self._agents: Dict[str, Dict[str, Any]] = {}

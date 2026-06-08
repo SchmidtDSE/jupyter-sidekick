@@ -1,6 +1,6 @@
 # ACP-in-Jupyter: design-decision record
 
-**Status:** Decisions made; repo created at `SchmidtDSE/jupyterlab-acp`; design spec next.
+**Status:** Decisions made; repo created at `SchmidtDSE/jupyter-sidekick`; design spec next.
 **Date:** 2026-06-03
 **Author:** Carl Boettiger (cboettig)
 **Supersedes the architecture of:** the proof-of-concept "bridge" at
@@ -68,7 +68,7 @@ resolving the forks below.
   `jupyter_ai_router`, `jupyter_ai_persona_manager` — are **pure upstream PyPI
   deps, unmodified**; nothing in our tree patches them. The only code that is
   ours is the bridge package.
-- **Decision:** move to a **dedicated repository** (working name `jupyterlab-acp`),
+- **Decision:** move to a **dedicated repository** (working name `jupyter-sidekick`),
   not a package inside the fork.
 - **Why:** escapes the "they forked jupyter-ai" framing, lets us shed the
   persona-suppression hacks entirely, and gives a clean install-and-try artifact
@@ -77,7 +77,7 @@ resolving the forks below.
 
 ### 4. Dependency posture — drop-in vs. ground-up
 
-- **Option A (drop-in):** rename the bridge to `jupyterlab-acp`, keep depending on
+- **Option A (drop-in):** rename the bridge to `jupyter-sidekick`, keep depending on
   the upstream `jupyter_ai_*` stack. Cheap; works today.
 - **Option B (ground-up):** depend on none of the `jupyter_ai_*` modules; build
   the Zed-like interface on the harness-agnostic primitives directly.
@@ -178,7 +178,7 @@ resolving the forks below.
 |---|---|
 | What a persona is | Delivered as a Skill / MCP the harness already loads; not a new class or `.persona.md` format |
 | Advancing the argument | Make the SKILL.md-vs-`.persona.md` case in #1558 **and** ship the artifact as evidence |
-| Where code lives | Dedicated repo (`jupyterlab-acp`), not in the fork |
+| Where code lives | Dedicated repo (`jupyter-sidekick`), not in the fork |
 | Dependency posture | Ground-up (B): `agent-client-protocol` + `@jupyter/chat` + `jupyter-server`; no `jupyter_ai_*` |
 | Chat & persistence | Drop `.chat`/multiplayer/router; use harness-native ACP session resume; keep notebook RTC |
 | `jupyter-ai-acp-client` | Don't depend on / fork / vendor it; build on `agent-client-protocol` directly; reference it and port only surface-clean helpers (e.g. `terminal_manager`) with credit |

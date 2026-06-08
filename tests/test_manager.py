@@ -7,9 +7,9 @@ import sys
 
 import pytest
 
-from jupyterlab_acp.binding import AlreadyBoundError
-from jupyterlab_acp.manager import BindingManager
-from jupyterlab_acp.registry import HarnessNotFoundError, HarnessRegistry, HarnessSpec
+from jupyter_sidekick.binding import AlreadyBoundError
+from jupyter_sidekick.manager import BindingManager
+from jupyter_sidekick.registry import HarnessNotFoundError, HarnessRegistry, HarnessSpec
 
 FAKE_AGENT = os.path.join(os.path.dirname(__file__), "fake_agent.py")
 HERE = os.path.dirname(__file__)
@@ -85,7 +85,7 @@ async def test_close_absent_chat_is_noop():
 async def test_prompt_streams_thought_and_tool_call_updates():
     import asyncio
 
-    from jupyterlab_acp.serialize import update_to_json
+    from jupyter_sidekick.serialize import update_to_json
 
     manager = BindingManager(_registry())
     binding = await manager.bind("chat-1", "fake", cwd=HERE)
