@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "jupyter-sidekick"
-version = "0.2.0"
+version = "0.3.0"
 description = "Jupyter-native access to coding agents over the Agent Client Protocol (ACP): per-chat single-agent binding."
 readme = "README.md"
 license = { text = "BSD-3-Clause" }
