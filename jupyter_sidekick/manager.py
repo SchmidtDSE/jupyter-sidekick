@@ -8,13 +8,15 @@ from __future__ import annotations
 from typing import Dict, Optional
 
 from .binding import AlreadyBoundError, ChatBinding
+from .env import compute_harness_env
 from .harness import HarnessSession
 from .registry import HarnessRegistry
 
 
 class BindingManager:
-    def __init__(self, registry: HarnessRegistry) -> None:
+    def __init__(self, registry: HarnessRegistry, env_passthrough: str = "all") -> None:
         self.registry = registry
+        self.env_passthrough = env_passthrough
         self._bindings: Dict[str, ChatBinding] = {}
 
     def get_or_create(self, chat_id: str) -> ChatBinding:
@@ -44,7 +46,8 @@ class BindingManager:
             raise AlreadyBoundError(
                 f"chat {chat_id} already bound to {binding.harness_id!r}"
             )
-        session = HarnessSession(spec.command, *spec.args, cwd=cwd, env=spec.env)
+        env = compute_harness_env(self.env_passthrough, spec.env)
+        session = HarnessSession(spec.command, *spec.args, cwd=cwd, env=env)
         await session.start()
         await session.new_session(cwd=cwd)
         binding.bind(spec.id, session)
@@ -61,7 +64,8 @@ class BindingManager:
             raise AlreadyBoundError(
                 f"chat {chat_id} already bound to {binding.harness_id!r}"
             )
-        session = HarnessSession(spec.command, *spec.args, cwd=cwd, env=spec.env)
+        env = compute_harness_env(self.env_passthrough, spec.env)
+        session = HarnessSession(spec.command, *spec.args, cwd=cwd, env=env)
         await session.start()
         binding.bind(spec.id, session)
         binding.pending_resume = (session_id, cwd or ".")

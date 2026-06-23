@@ -11,6 +11,10 @@ config trait (Zed/JetBrains-style), e.g.:
          "command": "my-agent", "args": ["--acp"], "env": {"FOO": "bar"}},
     ]
 
+Environment variable passthrough is controlled by the `env_passthrough` trait
+(or the `SIDEKICK_ENV_PASSTHROUGH` env var). See `jupyter_sidekick.env` for the
+full policy description.
+
 The testable seam is `build_registry`.
 """
 from __future__ import annotations
@@ -22,6 +26,7 @@ from jupyter_server.extension.application import ExtensionApp
 from jupyter_server.utils import url_path_join
 from traitlets import Dict as DictTrait
 from traitlets import List as ListTrait
+from traitlets import Unicode
 
 from .acp_registry import AcpRegistry
 from .chat_index import ChatIndex
@@ -75,6 +80,18 @@ def build_registry(specs: ListT[Dict[str, Any]]) -> HarnessRegistry:
     return registry
 
 
+def resolve_env_passthrough(explicit: str = "") -> str:
+    """Return the effective env_passthrough policy.
+
+    Priority: explicit traitlet value > SIDEKICK_ENV_PASSTHROUGH env var > "all".
+    Extracted as a standalone function so it can be unit-tested without
+    standing up a full ExtensionApp.
+    """
+    if explicit:
+        return explicit
+    return os.environ.get("SIDEKICK_ENV_PASSTHROUGH", "all")
+
+
 def build_default_registry() -> HarnessRegistry:
     return build_registry(DEFAULT_HARNESSES)
 
@@ -97,10 +114,28 @@ class AcpExtension(ExtensionApp):
         "dict with keys: id, display_name, command, args, env.",
     )
 
+    env_passthrough = Unicode(
+        config=True,
+        help=(
+            "Environment variable passthrough policy for harness subprocesses. "
+            "'all' (default) inherits the full server environment — recommended "
+            "for JupyterHub deployments where the hub constructs the user env. "
+            "'xdg' passes XDG_* variables on top of ACP minimal defaults, "
+            "fixing config-path discovery without exposing the whole env. "
+            "'minimal' uses only ACP defaults (HOME, PATH, SHELL, TERM, USER). "
+            "A comma-separated list (e.g. 'GH_TOKEN,ANTHROPIC_API_KEY') passes "
+            "only those named variables. "
+            "JupyterHub admins can set the default via the "
+            "SIDEKICK_ENV_PASSTHROUGH environment variable."
+        ),
+    ).tag(config=True)
+
     def initialize_settings(self) -> None:
         registry = build_registry(DEFAULT_HARNESSES + list(self.harnesses))
         self.settings["acp_registry"] = registry
-        self.settings["acp_manager"] = BindingManager(registry)
+        self.settings["acp_manager"] = BindingManager(
+            registry, env_passthrough=resolve_env_passthrough(self.env_passthrough)
+        )
         self.settings["acp_remote_registry"] = AcpRegistry()
         self.settings["acp_chat_index"] = ChatIndex(default_chat_index_path())
 
