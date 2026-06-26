@@ -2,6 +2,7 @@
 // (model / mode) sit just below the input, Zed-style. Slash-command completion
 // is driven by the commands the harness advertises.
 
+import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 import { ReactWidget } from '@jupyterlab/ui-components';
 import React, { useEffect, useRef, useState } from 'react';
 
@@ -51,6 +52,69 @@ const TOOL_GLYPHS: Record<string, string> = {
 
 function toolGlyph(toolKind: string | null): string {
   return (toolKind && TOOL_GLYPHS[toolKind]) || TOOL_GLYPHS.other;
+}
+
+// Render a chat message as Markdown with LaTeX math, reusing JupyterLab's
+// rendermime registry. The `text/markdown` renderer typesets `$…$`/`$$…$$`
+// (and `\(…\)`/`\[…\]`) through the registry's MathJax latexTypesetter — the
+// same path notebooks use — so math matches the rest of the JupyterLab UI.
+// Falls back to plain text when no registry is available (rendermime is an
+// optional plugin dependency).
+function MarkdownText(props: { text: string; rmRegistry: IRenderMimeRegistry | null }): JSX.Element {
+  const { text, rmRegistry } = props;
+  const hostRef = useRef<HTMLDivElement>(null);
+  const rendererRef = useRef<ReturnType<IRenderMimeRegistry['createRenderer']> | null>(null);
+  // Serialize renders: renderModel is async, and during streaming many calls
+  // overlap. Without this, a slow render of earlier text could resolve last and
+  // leave the message showing stale content. We render the latest text only,
+  // re-rendering once if the text advanced while a render was in flight.
+  const pendingRef = useRef<string | null>(null);
+  const renderingRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!rmRegistry || !host) {
+      return;
+    }
+    if (!rendererRef.current) {
+      rendererRef.current = rmRegistry.createRenderer('text/markdown');
+      host.appendChild(rendererRef.current.node);
+    }
+    const renderer = rendererRef.current;
+    pendingRef.current = text;
+    if (renderingRef.current) {
+      return;
+    }
+    // Drain to the most recent text. Errors (e.g. a partial expression
+    // mid-stream) are swallowed — the next chunk re-renders cleanly.
+    const drain = async (): Promise<void> => {
+      renderingRef.current = true;
+      try {
+        while (pendingRef.current !== null) {
+          const next = pendingRef.current;
+          pendingRef.current = null;
+          const model = rmRegistry.createModel({ data: { 'text/markdown': next } });
+          await renderer.renderModel(model).catch(() => undefined);
+        }
+      } finally {
+        renderingRef.current = false;
+      }
+    };
+    void drain();
+  }, [text, rmRegistry]);
+
+  // Dispose the Lumino renderer widget when this message unmounts.
+  useEffect(() => {
+    return () => {
+      rendererRef.current?.dispose();
+      rendererRef.current = null;
+    };
+  }, []);
+
+  if (!rmRegistry) {
+    return <span className="jacp-text">{text}</span>;
+  }
+  return <div className="jacp-text jacp-markdown" ref={hostRef} />;
 }
 
 // A file-edit diff: removed lines from old_text, added lines from new_text.
@@ -219,7 +283,8 @@ function Toolbar(props: {
   );
 }
 
-function ChatComponent(): JSX.Element {
+function ChatComponent(props: { rmRegistry: IRenderMimeRegistry | null }): JSX.Element {
+  const { rmRegistry } = props;
   const apiRef = useRef<AcpApi>(makeApi());
   const streamRef = useRef<ChatStream | null>(null);
   // Mirrors `chatId` so the (deps-[]) unmount cleanup can close the *current*
@@ -671,7 +736,7 @@ function ChatComponent(): JSX.Element {
             return (
               <div key={i} className={`jacp-msg jacp-${it.role}`}>
                 <span className="jacp-role">{it.role}</span>
-                <span className="jacp-text">{it.text}</span>
+                <MarkdownText text={it.text} rmRegistry={rmRegistry} />
               </div>
             );
           }
@@ -763,12 +828,15 @@ function ChatComponent(): JSX.Element {
 }
 
 export class AcpChatPanel extends ReactWidget {
-  constructor() {
+  private _rmRegistry: IRenderMimeRegistry | null;
+
+  constructor(rmRegistry: IRenderMimeRegistry | null = null) {
     super();
+    this._rmRegistry = rmRegistry;
     this.addClass('jacp-panel');
   }
 
   render(): JSX.Element {
-    return <ChatComponent />;
+    return <ChatComponent rmRegistry={this._rmRegistry} />;
   }
 }
