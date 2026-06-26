@@ -337,6 +337,23 @@
   color: var(--jp-content-font-color1);
 }
 
+/* Markdown-rendered messages: the rendermime output supplies its own block
+   layout, so cancel the inherited pre-wrap and trim the default first/last
+   block margins that would otherwise pad each message. Wide content (display
+   math, code blocks, tables) scrolls rather than overflowing the sidebar. */
+.jacp-markdown {
+  white-space: normal;
+  overflow-x: auto;
+}
+
+.jacp-markdown > *:first-child {
+  margin-top: 0;
+}
+
+.jacp-markdown > *:last-child {
+  margin-bottom: 0;
+}
+
 /* Agent reasoning — de-emphasized, set apart from chat messages. */
 .jacp-thought {
   display: flex;

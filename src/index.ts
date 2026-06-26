@@ -5,6 +5,7 @@ import {
 } from '@jupyterlab/application';
 import { ICommandPalette } from '@jupyterlab/apputils';
 import { ILauncher } from '@jupyterlab/launcher';
+import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 import { LabIcon } from '@jupyterlab/ui-components';
 
 import { AcpChatPanel } from './widget';
@@ -32,19 +33,20 @@ const plugin: JupyterFrontEndPlugin<void> = {
   id: 'jupyter-sidekick:plugin',
   description: 'Zed-style ACP chat for JupyterLab.',
   autoStart: true,
-  optional: [ICommandPalette, ILauncher, ILayoutRestorer],
+  optional: [ICommandPalette, ILauncher, ILayoutRestorer, IRenderMimeRegistry],
   activate: (
     app: JupyterFrontEnd,
     palette: ICommandPalette | null,
     launcher: ILauncher | null,
-    restorer: ILayoutRestorer | null
+    restorer: ILayoutRestorer | null,
+    rendermime: IRenderMimeRegistry | null
   ) => {
     // One persistent chat docked in the left sidebar (icon-only). Drag the
     // tab to the right via right-click → "Switch Sidebar Side".
     let sidebar: AcpChatPanel | null = null;
     const ensureSidebar = (): AcpChatPanel => {
       if (sidebar === null || sidebar.isDisposed) {
-        sidebar = new AcpChatPanel();
+        sidebar = new AcpChatPanel(rendermime);
         sidebar.id = 'jupyter-sidekick-sidebar';
         sidebar.title.icon = acpIcon;
         sidebar.title.caption = 'ACP Chat'; // tooltip only — no text label
@@ -61,7 +63,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     let counter = 0;
     const newMainChat = (): void => {
       counter += 1;
-      const panel = new AcpChatPanel();
+      const panel = new AcpChatPanel(rendermime);
       panel.id = `jupyter-sidekick-chat-${Date.now()}-${counter}`;
       panel.title.icon = acpIcon;
       panel.title.label = `ACP Chat ${counter}`;
