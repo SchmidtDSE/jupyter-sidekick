@@ -52,6 +52,19 @@ def resolve_cwd(
     return None
 
 
+def fs_relpath(abs_path: Optional[str], server_root: Optional[str]) -> Optional[str]:
+    """Map an agent's absolute path to one relative to the Jupyter server root
+    (what the browser's contents/document API uses). Returns None if there's no
+    root or the path escapes it — the browser can't reach such a file, so the
+    caller falls back to a server-side disk operation."""
+    if not server_root or not abs_path:
+        return None
+    rel = os.path.relpath(os.path.abspath(abs_path), os.path.abspath(server_root))
+    if rel == os.pardir or rel.startswith(os.pardir + os.sep) or os.path.isabs(rel):
+        return None
+    return rel
+
+
 class _BaseHandler(ExtensionHandlerMixin, APIHandler):
     @property
     def registry(self):
@@ -276,6 +289,7 @@ class StreamHandler(WebSocketMixin, WebSocketHandler, JupyterHandler):
         self._listener = self._forward
         client.add_update_listener(self._listener)
         client.set_permission_handler(self._send_permission)
+        client.set_fs_handler(self._send_fs)
         # Resume deferred its load_session until now, so the agent's replay of
         # the prior conversation reaches the browser through this stream.
         pending = getattr(self._binding, "pending_resume", None)
@@ -297,6 +311,18 @@ class StreamHandler(WebSocketMixin, WebSocketHandler, JupyterHandler):
 
     def _send_permission(self, request_id, payload) -> None:
         self._send({"type": "permission_request", "request_id": request_id, **payload})
+
+    def _send_fs(self, request_id, payload) -> None:
+        """Forward a file op to the browser to apply against the live document.
+        Paths outside the server root short-circuit to the disk fallback."""
+        rel = fs_relpath(payload.get("path"), self.settings.get("server_root_dir"))
+        if rel is None:
+            self._binding.session.client.resolve_fs(request_id, None)
+            return
+        message = {"type": f"fs_{payload['op']}", "request_id": request_id, "path": rel}
+        if payload["op"] == "write":
+            message["text"] = payload.get("content")
+        self._send(message)
 
     def _send(self, message: dict) -> None:
         try:
@@ -325,6 +351,15 @@ class StreamHandler(WebSocketMixin, WebSocketHandler, JupyterHandler):
             self._binding.session.client.resolve_permission(
                 data.get("request_id"), data.get("option_id")
             )
+        elif kind == "fs_read_response":
+            self._binding.session.client.resolve_fs(
+                data.get("request_id"),
+                {"found": data.get("found"), "content": data.get("text")},
+            )
+        elif kind == "fs_write_response":
+            self._binding.session.client.resolve_fs(
+                data.get("request_id"), {"applied": data.get("applied")}
+            )
 
     async def _run_prompt(self, text: str) -> None:
         try:
@@ -339,3 +374,4 @@ class StreamHandler(WebSocketMixin, WebSocketHandler, JupyterHandler):
             if self._listener is not None:
                 client.remove_update_listener(self._listener)
             client.clear_permission_handler()
+            client.clear_fs_handler()

@@ -816,7 +816,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@lumino/widgets@npm:^1.37.2 || ^2.7.5, @lumino/widgets@npm:^1.37.2 || ^2.8.0, @lumino/widgets@npm:^2.7.5, @lumino/widgets@npm:^2.8.0":
+"@lumino/widgets@npm:^1.37.2 || ^2.7.5, @lumino/widgets@npm:^1.37.2 || ^2.8.0, @lumino/widgets@npm:^2.0.0, @lumino/widgets@npm:^2.7.5, @lumino/widgets@npm:^2.8.0":
   version: 2.8.0
   resolution: "@lumino/widgets@npm:2.8.0"
   dependencies:
@@ -2148,6 +2148,7 @@ __metadata:
     "@jupyterlab/rendermime": ^4.2.0
     "@jupyterlab/services": ^7.2.0
     "@jupyterlab/ui-components": ^4.2.0
+    "@lumino/widgets": ^2.0.0
     "@types/react": ^18.2.0
     "@types/react-dom": ^18.2.0
     react: ^18.2.0

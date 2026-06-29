@@ -10,10 +10,37 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from typing import Any, Callable, Dict, List, Optional
 
 import acp
 from acp import schema as S
+
+
+def _slice_text(content: str, line: Optional[int], limit: Optional[int]) -> str:
+    """Apply ACP read_text_file windowing: ``line`` is a 1-based start line and
+    ``limit`` a max line count. No window → the whole file."""
+    if not line and not limit:
+        return content
+    lines = content.splitlines(keepends=True)
+    start = (line - 1) if line else 0
+    if start < 0:
+        start = 0
+    end = (start + limit) if limit else len(lines)
+    return "".join(lines[start:end])
+
+
+def _disk_read(path: str, line: Optional[int], limit: Optional[int]) -> str:
+    with open(path, "r", encoding="utf-8") as fh:
+        return _slice_text(fh.read(), line, limit)
+
+
+def _disk_write(path: str, content: str) -> None:
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(content)
 
 
 def _serialize_tool_call(tool_call) -> Dict[str, Any]:
@@ -34,6 +61,12 @@ class HarnessClient(acp.Client):
         self._permission_handler: Optional[Callable[[str, dict], None]] = None
         self._pending_permissions: Dict[str, "asyncio.Future"] = {}
         self._permission_counter = 0
+        # Same UI round-trip as permissions, for fs/read+write: the handler
+        # (the websocket) forwards the op to the browser, which applies it to the
+        # live document and replies. Absent a handler (headless), we hit disk.
+        self._fs_handler: Optional[Callable[[str, dict], None]] = None
+        self._pending_fs: Dict[str, "asyncio.Future"] = {}
+        self._fs_counter = 0
 
     # --- session updates ---
 
@@ -103,3 +136,49 @@ class HarnessClient(acp.Client):
         if chosen is None and options:
             chosen = options[0].option_id
         return cls._response_for(chosen)
+
+    # --- file system (fs/read_text_file, fs/write_text_file) ---
+
+    def set_fs_handler(self, handler: Callable[[str, dict], None]) -> None:
+        """Register the UI handler, called as ``handler(request_id, payload)`` to
+        forward a file op to the browser. The UI later calls `resolve_fs`."""
+        self._fs_handler = handler
+
+    def clear_fs_handler(self) -> None:
+        self._fs_handler = None
+
+    def resolve_fs(self, request_id: str, result: Optional[dict]) -> None:
+        """Resolve a pending fs op. ``result`` is the browser's reply, or None to
+        signal 'not handled by the UI' (caller then falls back to disk)."""
+        future = self._pending_fs.pop(request_id, None)
+        if future is not None and not future.done():
+            future.set_result(result)
+
+    async def _ask_ui(self, op: str, path: str, content: Optional[str] = None):
+        """Round-trip a file op to the browser; None if no UI is attached."""
+        if self._fs_handler is None:
+            return None
+        self._fs_counter += 1
+        request_id = f"fs-{self._fs_counter}"
+        future = asyncio.get_event_loop().create_future()
+        self._pending_fs[request_id] = future
+        self._fs_handler(request_id, {"op": op, "path": path, "content": content})
+        return await future
+
+    async def read_text_file(self, path, session_id, limit=None, line=None, **kwargs):
+        # Prefer the live in-browser document (it may hold unsaved edits the
+        # agent should see); fall back to disk when it isn't open / no UI.
+        result = await self._ask_ui("read", path)
+        if result and result.get("found"):
+            content = _slice_text(result.get("content") or "", line, limit)
+        else:
+            content = _disk_read(path, line, limit)
+        return S.ReadTextFileResponse(content=content)
+
+    async def write_text_file(self, content, path, session_id, **kwargs):
+        # Apply to the live open document if possible (no disk change → no
+        # overwrite/revert prompt); otherwise write straight to disk.
+        result = await self._ask_ui("write", path, content)
+        if not (result and result.get("applied")):
+            _disk_write(path, content)
+        return S.WriteTextFileResponse()

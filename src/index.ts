@@ -46,7 +46,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     let sidebar: AcpChatPanel | null = null;
     const ensureSidebar = (): AcpChatPanel => {
       if (sidebar === null || sidebar.isDisposed) {
-        sidebar = new AcpChatPanel(rendermime);
+        sidebar = new AcpChatPanel(rendermime, app);
         sidebar.id = 'jupyter-sidekick-sidebar';
         sidebar.title.icon = acpIcon;
         sidebar.title.caption = 'ACP Chat'; // tooltip only — no text label
@@ -63,7 +63,7 @@ const plugin: JupyterFrontEndPlugin<void> = {
     let counter = 0;
     const newMainChat = (): void => {
       counter += 1;
-      const panel = new AcpChatPanel(rendermime);
+      const panel = new AcpChatPanel(rendermime, app);
       panel.id = `jupyter-sidekick-chat-${Date.now()}-${counter}`;
       panel.title.icon = acpIcon;
       panel.title.label = `ACP Chat ${counter}`;

@@ -2,8 +2,10 @@
 // (model / mode) sit just below the input, Zed-style. Slash-command completion
 // is driven by the commands the harness advertises.
 
+import { JupyterFrontEnd } from '@jupyterlab/application';
 import { IRenderMimeRegistry } from '@jupyterlab/rendermime';
 import { ReactWidget } from '@jupyterlab/ui-components';
+import { Widget } from '@lumino/widgets';
 import React, { useEffect, useRef, useState } from 'react';
 
 import { AcpApi } from './api';
@@ -78,7 +80,11 @@ function MarkdownText(props: { text: string; rmRegistry: IRenderMimeRegistry | n
     }
     if (!rendererRef.current) {
       rendererRef.current = rmRegistry.createRenderer('text/markdown');
-      host.appendChild(rendererRef.current.node);
+      // Attach through Lumino (not a raw appendChild): RenderedMarkdown gates
+      // LaTeX typesetting on `shouldTypeset: this.isAttached`, and that flag is
+      // only set by Lumino's attach lifecycle. A bare appendChild leaves it
+      // false, so markdown renders but `$…$` never typesets.
+      Widget.attach(rendererRef.current, host);
     }
     const renderer = rendererRef.current;
     pendingRef.current = text;
@@ -283,13 +289,45 @@ function Toolbar(props: {
   );
 }
 
-function ChatComponent(props: { rmRegistry: IRenderMimeRegistry | null }): JSX.Element {
-  const { rmRegistry } = props;
+// The slice of an open document we drive for live edits: its path (server-root
+// relative, matching what the server sends) and a model that round-trips its
+// whole content as a string. `fromString` accepts notebook JSON or plain text
+// and marks the document dirty; the user saves when ready.
+interface LiveDoc {
+  path: string;
+  model: { fromString(value: string): void; toString(): string };
+}
+
+function ChatComponent(props: {
+  rmRegistry: IRenderMimeRegistry | null;
+  app: JupyterFrontEnd | null;
+}): JSX.Element {
+  const { rmRegistry, app } = props;
+
+  // Find an open document widget by path, to read/apply edits against its live
+  // model rather than disk. Returns null when the file isn't currently open.
+  const findLiveDoc = (path: string): LiveDoc | null => {
+    if (!app) {
+      return null;
+    }
+    for (const w of app.shell.widgets('main')) {
+      const ctx = (w as unknown as { context?: LiveDoc }).context;
+      if (ctx && ctx.path === path) {
+        return ctx;
+      }
+    }
+    return null;
+  };
+
   const apiRef = useRef<AcpApi>(makeApi());
   const streamRef = useRef<ChatStream | null>(null);
   // Mirrors `chatId` so the (deps-[]) unmount cleanup can close the *current*
   // binding rather than the value captured at mount.
   const chatIdRef = useRef<string | null>(null);
+  // Scroll container for the transcript, plus a "stick to bottom" flag: we
+  // keep following new output unless the user has scrolled up to read back.
+  const messagesRef = useRef<HTMLDivElement>(null);
+  const stickRef = useRef<boolean>(true);
   const [harnesses, setHarnesses] = useState<HarnessInfo[]>([]);
   const [registry, setRegistry] = useState<RegistryAgent[]>([]);
   const [recents, setRecents] = useState<ChatRecord[]>([]);
@@ -338,6 +376,36 @@ function ChatComponent(props: { rmRegistry: IRenderMimeRegistry | null }): JSX.E
   useEffect(() => {
     chatIdRef.current = chatId;
   }, [chatId]);
+
+  // Autoscroll: follow the transcript as it grows. A MutationObserver catches
+  // both React re-renders and the *async* markdown rendering (which mutates the
+  // DOM after React has committed), so streamed thoughts and prose keep the
+  // view pinned to the bottom — unless the user scrolled up (stickRef false).
+  useEffect(() => {
+    const el = messagesRef.current;
+    if (!el) {
+      return;
+    }
+    const toBottom = (): void => {
+      if (stickRef.current) {
+        el.scrollTop = el.scrollHeight;
+      }
+    };
+    const obs = new MutationObserver(toBottom);
+    obs.observe(el, { childList: true, subtree: true, characterData: true });
+    toBottom();
+    return () => obs.disconnect();
+  }, []);
+
+  // Track whether the user is parked at the bottom; if they scroll up to read,
+  // stop auto-following until they return to the bottom.
+  const onMessagesScroll = (): void => {
+    const el = messagesRef.current;
+    if (!el) {
+      return;
+    }
+    stickRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+  };
 
   // Append a streamed chunk to the last message of the same role, or start a
   // new one. Used for live agent output and for replayed turns on resume.
@@ -433,6 +501,34 @@ function ChatComponent(props: { rmRegistry: IRenderMimeRegistry | null }): JSX.E
         tool_call: ev.tool_call,
         options: ev.options ?? []
       });
+    } else if (ev.type === 'fs_write' && ev.request_id && ev.path != null) {
+      // Agent wants to write a file: apply to the live open document (instant,
+      // marks dirty, no disk change → no overwrite/revert). If it isn't open,
+      // tell the server, which falls back to a plain disk write.
+      const doc = findLiveDoc(ev.path);
+      let applied = false;
+      if (doc) {
+        try {
+          doc.model.fromString(ev.text ?? '');
+          applied = true;
+        } catch {
+          applied = false;
+        }
+      }
+      streamRef.current?.respondFsWrite(ev.request_id, applied);
+    } else if (ev.type === 'fs_read' && ev.request_id && ev.path != null) {
+      // Agent wants to read a file: return the live document's current text
+      // (including unsaved edits) so it edits against what the user sees.
+      const doc = findLiveDoc(ev.path);
+      let text: string | null = null;
+      if (doc) {
+        try {
+          text = doc.model.toString();
+        } catch {
+          text = null;
+        }
+      }
+      streamRef.current?.respondFsRead(ev.request_id, text !== null, text);
     } else if (ev.type === 'turn_end') {
       setBusy(false);
     }
@@ -730,7 +826,7 @@ function ChatComponent(props: { rmRegistry: IRenderMimeRegistry | null }): JSX.E
           </button>
         </div>
       )}
-      <div className="jacp-messages">
+      <div className="jacp-messages" ref={messagesRef} onScroll={onMessagesScroll}>
         {items.map((it, i) => {
           if (it.kind === 'message') {
             return (
@@ -741,11 +837,21 @@ function ChatComponent(props: { rmRegistry: IRenderMimeRegistry | null }): JSX.E
             );
           }
           if (it.kind === 'thought') {
+            // Reasoning is folded away by default; the agent's prose is what
+            // should draw the eye. While this is the trailing item and the
+            // turn is still running, mark it active so the label animates.
+            const active = busy && i === items.length - 1;
             return (
-              <div key={i} className="jacp-thought">
-                <span className="jacp-thought-label">thinking</span>
+              <details
+                key={i}
+                className={`jacp-thought${active ? ' jacp-thought-active' : ''}`}
+              >
+                <summary className="jacp-thought-label">
+                  thinking
+                  {active && <span className="jacp-thought-spinner" aria-hidden="true" />}
+                </summary>
                 <span className="jacp-text">{it.text}</span>
-              </div>
+              </details>
             );
           }
           return (
@@ -829,14 +935,19 @@ function ChatComponent(props: { rmRegistry: IRenderMimeRegistry | null }): JSX.E
 
 export class AcpChatPanel extends ReactWidget {
   private _rmRegistry: IRenderMimeRegistry | null;
+  private _app: JupyterFrontEnd | null;
 
-  constructor(rmRegistry: IRenderMimeRegistry | null = null) {
+  constructor(
+    rmRegistry: IRenderMimeRegistry | null = null,
+    app: JupyterFrontEnd | null = null
+  ) {
     super();
     this._rmRegistry = rmRegistry;
+    this._app = app;
     this.addClass('jacp-panel');
   }
 
   render(): JSX.Element {
-    return <ChatComponent rmRegistry={this._rmRegistry} />;
+    return <ChatComponent rmRegistry={this._rmRegistry} app={this._app} />;
   }
 }

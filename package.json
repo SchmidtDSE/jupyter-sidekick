@@ -1,6 +1,6 @@
 {
   "name": "jupyter-sidekick",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Zed-style ACP chat for JupyterLab: per-chat single-agent binding.",
   "license": "BSD-3-Clause",
   "author": "Carl Boettiger",
@@ -39,6 +39,7 @@
     "@jupyterlab/rendermime": "^4.2.0",
     "@jupyterlab/services": "^7.2.0",
     "@jupyterlab/ui-components": "^4.2.0",
+    "@lumino/widgets": "^2.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
