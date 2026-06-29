@@ -45,6 +45,16 @@ export class ChatStream {
     this.send({ type: 'permission_response', request_id: requestId, option_id: optionId });
   }
 
+  /** Reply to an fs/read_text_file the server forwarded for the live document. */
+  respondFsRead(requestId: string, found: boolean, text: string | null): void {
+    this.send({ type: 'fs_read_response', request_id: requestId, found, text });
+  }
+
+  /** Reply to an fs/write_text_file: whether we applied it to a live document. */
+  respondFsWrite(requestId: string, applied: boolean): void {
+    this.send({ type: 'fs_write_response', request_id: requestId, applied });
+  }
+
   close(): void {
     this.ws?.close();
     this.ws = null;

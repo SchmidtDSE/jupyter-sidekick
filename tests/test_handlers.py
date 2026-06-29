@@ -190,3 +190,20 @@ def test_resolve_cwd(requested, server_root, env, existing, expected, monkeypatc
         monkeypatch.setenv(key, value)
     monkeypatch.setattr(os.path, "isdir", lambda p: p in existing)
     assert resolve_cwd(requested, server_root) == expected
+
+
+@pytest.mark.parametrize(
+    "abs_path, root, expected",
+    [
+        ("/srv/work/notebooks/a.ipynb", "/srv/work", "notebooks/a.ipynb"),
+        ("/srv/work/a.ipynb", "/srv/work", "a.ipynb"),
+        ("/etc/passwd", "/srv/work", None),          # escapes the root
+        ("/srv/work/../secret", "/srv/work", None),   # normalizes to escape
+        ("/srv/work/a.ipynb", None, None),            # no root configured
+        (None, "/srv/work", None),                    # no path
+    ],
+)
+def test_fs_relpath(abs_path, root, expected):
+    from jupyter_sidekick.handlers import fs_relpath
+
+    assert fs_relpath(abs_path, root) == expected

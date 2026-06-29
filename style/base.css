@@ -354,11 +354,9 @@
   margin-bottom: 0;
 }
 
-/* Agent reasoning — de-emphasized, set apart from chat messages. */
+/* Agent reasoning — de-emphasized and folded away by default (a <details>),
+   so the agent's prose is what draws the eye. Expand to read the reasoning. */
 .jacp-thought {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
   padding-left: 8px;
   border-left: 2px solid var(--jp-border-color2);
   color: var(--jp-content-font-color3);
@@ -366,10 +364,54 @@
   white-space: pre-wrap;
 }
 
+.jacp-thought[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .jacp-thought-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
   font-size: var(--jp-ui-font-size0);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+}
+
+.jacp-thought-label::-webkit-details-marker {
+  display: none;
+}
+
+/* Disclosure caret, matching the registry's folding affordance. */
+.jacp-thought-label::before {
+  content: '▸';
+  display: inline-block;
+  color: var(--jp-content-font-color3);
+}
+
+.jacp-thought[open] > .jacp-thought-label::before {
+  content: '▾';
+}
+
+/* In-progress indicator: a spinning ring shown while the agent is still
+   thinking, so a folded reasoning block still signals live activity. */
+.jacp-thought-spinner {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--jp-border-color1);
+  border-top-color: var(--jp-brand-color1);
+  border-radius: 50%;
+  animation: jacp-spin 0.7s linear infinite;
+}
+
+@keyframes jacp-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Tool call — a card that updates in place as status changes and can carry

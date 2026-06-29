@@ -10,9 +10,22 @@ import contextlib
 from typing import Mapping, Optional
 
 import acp
+from acp import schema as S
 
 from .acp_client import HarnessClient
 from .state import SessionState
+
+# Advertise that we handle file reads/writes ourselves (fs/read_text_file,
+# fs/write_text_file). Without this the agent edits files directly on disk,
+# which a notebook open in JupyterLab only notices later as an out-of-band
+# change ("overwrite/revert"). With it, the agent routes file ops through us and
+# we apply them to the *live* open document — jupyter-ai-style live editing.
+_CLIENT_CAPABILITIES = S.ClientCapabilities(
+    # `auth` set explicitly only to avoid a benign pydantic serialization
+    # warning from its dict-typed default; we don't advertise any auth methods.
+    auth=S.AuthCapabilities(),
+    fs=S.FileSystemCapabilities(readTextFile=True, writeTextFile=True),
+)
 
 
 class HarnessSession:
@@ -53,7 +66,10 @@ class HarnessSession:
                 use_unstable_protocol=True,
             )
         )
-        await self.conn.initialize(protocol_version=acp.PROTOCOL_VERSION)
+        await self.conn.initialize(
+            protocol_version=acp.PROTOCOL_VERSION,
+            client_capabilities=_CLIENT_CAPABILITIES,
+        )
         return self
 
     async def new_session(self, cwd: Optional[str] = None):
